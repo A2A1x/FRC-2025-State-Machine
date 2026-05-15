@@ -1,19 +1,18 @@
-// Based on
-// https://github.com/CrossTheRoadElec/Phoenix6-Examples/blob/main/java/SwerveWithPathPlanner/src/main/java/frc/robot/subsystems/CommandSwerveDrivetrain.java
 package frc.robot.subsystems.swerve;
 
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.swerve.SwerveDrivetrain;
+import com.ctre.phoenix6.swerve.SwerveModule;
+import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
+import com.ctre.phoenix6.swerve.utility.PhoenixPIDController;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
-import com.pathplanner.lib.util.DriveFeedforwards;
-import com.pathplanner.lib.util.swerve.SwerveSetpoint;
-import com.pathplanner.lib.util.swerve.SwerveSetpointGenerator;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -25,44 +24,82 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-import frc.reefscape.Field;
-import frc.reefscape.FieldHelpers;
+import frc.reefscape.FieldConstants;
 import frc.robot.Robot;
-import frc.robot.subsystems.swerve.controllers.TagCenterAlignController;
-import frc.robot.subsystems.swerve.controllers.TagDistanceAlignController;
-import frc.robot.subsystems.swerve.controllers.TranslationXController;
-import frc.robot.subsystems.swerve.controllers.TranslationYController;
-import frc.spectrumLib.SpectrumSubsystem;
 import frc.spectrumLib.Telemetry;
 import frc.spectrumLib.util.Util;
-import java.util.function.DoubleSupplier;
-import java.util.function.Supplier;
 import lombok.Getter;
 
 /**
  * Class that extends the Phoenix SwerveDrivetrain class and implements subsystem so it can be used
  * in command-based projects easily.
  */
-public class Swerve extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder>
-        implements SpectrumSubsystem {
+public class Swerve extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> implements Subsystem {
+
+    // ------------------------------------------------------------------------
+    // State machine
+    // ------------------------------------------------------------------------
+    public enum WantedState {
+        TELEOP_DRIVE,
+        ROTATION_LOCK,
+        DRIVE_TO_POINT,
+        IDLE
+    }
+
+    public enum SystemState {
+        TELEOP_DRIVE,
+        ROTATION_LOCK,
+        DRIVE_TO_POINT,
+        IDLE
+    }
+
+    private WantedState wantedState = WantedState.IDLE;
+    private SystemState systemState = SystemState.IDLE;
+
+    private Rotation2d desiredRotation = Rotation2d.kZero;
+    private Pose2d desiredPoseForDriveToPoint = new Pose2d();
+
+    public static final double TRANSLATION_ERROR_MARGIN_METERS = Units.inchesToMeters(1.0);
+    public static final double DRIVE_TO_POINT_STATIC_FRICTION_CONSTANT = 0.02;
+
+    private final PIDController teleopDriveToPointController = new PIDController(3.6, 0, 0.1);
+
+    private double teleopVelocityCoefficient = 1.0;
+    private double rotationVelocityCoefficient = 1.0;
+
+    private static final double SKEW_COMPENSATION_SCALAR = -0.03;
+
+    // ------------------------------------------------------------------------
+    // Hardware / config
+    // ------------------------------------------------------------------------
     @Getter private SwerveConfig config;
     private Notifier simNotifier = null;
     private double lastSimTime;
-    private TagCenterAlignController tagCenterAlignController;
-    private TagDistanceAlignController tagDistanceAlignController;
-    private TranslationXController xController;
-    private TranslationYController yController;
 
-    @Getter
-    protected SwerveModuleState[] setpoints =
-            new SwerveModuleState[] {}; // This currently doesn't do anything
+    // ------------------------------------------------------------------------
+    // Controllers
+    // ------------------------------------------------------------------------
 
-    /* Keep track if we've ever applied the operator perspective before or not */
-    private boolean hasAppliedPilotPerspective = false;
+    @Getter protected SwerveModuleState[] setpoints = new SwerveModuleState[] {};
 
-    private final SwerveRequest.ApplyRobotSpeeds AutoRequest = new SwerveRequest.ApplyRobotSpeeds();
+    // ------------------------------------------------------------------------
+    // CTRE requests
+    // ------------------------------------------------------------------------
+    private final SwerveRequest.ApplyRobotSpeeds PATHPLANNER_REQUEST =
+            new SwerveRequest.ApplyRobotSpeeds();
 
+    private static final SwerveRequest.ApplyFieldSpeeds FIELD_CENTRIC_DRIVE =
+            new SwerveRequest.ApplyFieldSpeeds().withDriveRequestType(DriveRequestType.Velocity);
+
+    private final SwerveRequest.FieldCentricFacingAngle DRIVE_AT_ANGLE_REQUEST =
+            new SwerveRequest.FieldCentricFacingAngle()
+                    .withDriveRequestType(SwerveModule.DriveRequestType.Velocity);
+
+    // ------------------------------------------------------------------------
+    // Constructor
+    // ------------------------------------------------------------------------
     /**
      * Constructs a new Swerve drive subsystem.
      *
@@ -76,80 +113,199 @@ public class Swerve extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder>
                 CANcoder::new,
                 config.getDrivetrainConstants(),
                 config.getModules());
-        // this.robotConfig = robotConfig;
         this.config = config;
         configurePathPlanner();
 
-        tagCenterAlignController = new TagCenterAlignController(config);
-        tagDistanceAlignController = new TagDistanceAlignController(config);
-        xController = new TranslationXController(config);
-        yController = new TranslationYController(config);
+        // Configure heading PID on the shared driveAtAngle request
+        DRIVE_AT_ANGLE_REQUEST.HeadingController =
+                new PhoenixPIDController(
+                        config.getKPRotationController(),
+                        config.getKIRotationController(),
+                        config.getKDRotationController());
+        DRIVE_AT_ANGLE_REQUEST.HeadingController.enableContinuousInput(-Math.PI, Math.PI);
 
         if (Utils.isSimulation()) {
             startSimThread();
         }
 
-        Robot.add(this);
         this.register();
         registerTelemetry(this::log);
         Telemetry.print(getName() + " Subsystem Initialized: ");
     }
 
-    protected void log(SwerveDriveState state) {
-        Telemetry.log("Swerve/Pose", state.Pose);
-        Telemetry.log("Swerve/TargetStates", state.ModuleTargets);
-        Telemetry.log("Swerve/MeasuredStates", state.ModuleStates);
-        Telemetry.log("Swerve/MeasuredSpeeds", state.Speeds);
-    }
-
-    /**
-     * This method is called periodically and is used to update the pilot's perspective. It ensures
-     * that the swerve drive system is aligned correctly based on the pilot's view.
-     */
+    // ------------------------------------------------------------------------
+    // Periodic / state machine
+    // ------------------------------------------------------------------------
     @Override
     public void periodic() {
-        Telemetry.log("Swerve/CurrentCommand", getCurrentCommandName());
-        setPilotPerspective();
+
+        systemState = handleStateTransition();
+        applyStates();
+
+        Telemetry.log("Swerve/SystemState", systemState.toString());
+        Telemetry.log("Swerve/WantedState", wantedState.toString());
     }
 
-    public void setupStates() {
-        SwerveStates.setStates();
+    private SystemState handleStateTransition() {
+        return switch (wantedState) {
+            case TELEOP_DRIVE -> SystemState.TELEOP_DRIVE;
+            case ROTATION_LOCK -> SystemState.ROTATION_LOCK;
+            case DRIVE_TO_POINT -> SystemState.DRIVE_TO_POINT;
+            default -> SystemState.IDLE;
+        };
     }
 
-    public void setupDefaultCommand() {
-        SwerveStates.setupDefaultCommand();
+    private void applyStates() {
+        switch (systemState) {
+            default:
+            case IDLE:
+                break;
+
+            case TELEOP_DRIVE:
+                setControl(FIELD_CENTRIC_DRIVE.withSpeeds(calculateSpeedsBasedOnJoystickInputs()));
+                break;
+
+            case ROTATION_LOCK:
+                setControl(
+                        DRIVE_AT_ANGLE_REQUEST
+                                .withVelocityX(
+                                        calculateSpeedsBasedOnJoystickInputs().vxMetersPerSecond)
+                                .withVelocityY(
+                                        calculateSpeedsBasedOnJoystickInputs().vyMetersPerSecond)
+                                .withTargetDirection(desiredRotation));
+                break;
+
+            case DRIVE_TO_POINT:
+                {
+                    var toTarget =
+                            desiredPoseForDriveToPoint
+                                    .getTranslation()
+                                    .minus(getRobotPose().getTranslation());
+                    double distance = toTarget.getNorm();
+                    double friction =
+                            distance >= Units.inchesToMeters(0.5)
+                                    ? DRIVE_TO_POINT_STATIC_FRICTION_CONSTANT
+                                            * config.getSpeedAt12Volts().baseUnitMagnitude()
+                                    : 0.0;
+                    double speed =
+                            Math.min(
+                                    Math.abs(teleopDriveToPointController.calculate(distance, 0))
+                                            + friction,
+                                    config.getSpeedAt12Volts().baseUnitMagnitude());
+                    var dir = toTarget.getAngle();
+
+                    setControl(
+                            DRIVE_AT_ANGLE_REQUEST
+                                    .withVelocityX(speed * dir.getCos())
+                                    .withVelocityY(speed * dir.getSin())
+                                    .withTargetDirection(desiredPoseForDriveToPoint.getRotation()));
+                    break;
+                }
+        }
     }
 
-    protected String getCurrentCommandName() {
-        Command currentCommand = this.getCurrentCommand();
-        if (currentCommand != null) {
-            return currentCommand.getName();
+    private ChassisSpeeds calculateSpeedsBasedOnJoystickInputs() {
+        if (DriverStation.getAlliance().isEmpty()) {
+            return new ChassisSpeeds(0, 0, 0);
         }
 
-        return "none";
+        double xMagnitude = Robot.getPilot().getDriveFwdPositive();
+        double yMagnitude = Robot.getPilot().getDriveLeftPositive();
+        double angularMagnitude = Robot.getPilot().getDriveCCWPositive();
+        angularMagnitude = Math.copySign(angularMagnitude * angularMagnitude, angularMagnitude);
+
+        double xVelocity =
+                (DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue)
+                                        == DriverStation.Alliance.Blue
+                                ? -xMagnitude * config.getSpeedAt12Volts().baseUnitMagnitude()
+                                : xMagnitude * config.getSpeedAt12Volts().baseUnitMagnitude())
+                        * teleopVelocityCoefficient;
+        double yVelocity =
+                (DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue)
+                                        == DriverStation.Alliance.Blue
+                                ? -yMagnitude * config.getSpeedAt12Volts().baseUnitMagnitude()
+                                : yMagnitude * config.getSpeedAt12Volts().baseUnitMagnitude())
+                        * teleopVelocityCoefficient;
+        double angularVelocity =
+                angularMagnitude * config.getMaxAngularVelocity() * rotationVelocityCoefficient;
+
+        Rotation2d skewCompensationFactor =
+                Rotation2d.fromRadians(
+                        getCurrentRobotChassisSpeeds().omegaRadiansPerSecond
+                                * SKEW_COMPENSATION_SCALAR);
+
+        return ChassisSpeeds.fromRobotRelativeSpeeds(
+                ChassisSpeeds.fromFieldRelativeSpeeds(
+                        new ChassisSpeeds(xVelocity, yVelocity, -angularVelocity),
+                        getRobotPose().getRotation()),
+                getRobotPose().getRotation().plus(skewCompensationFactor));
+    }
+
+    // ------------------------------------------------------------------------
+    // Public state setters
+    // ------------------------------------------------------------------------
+    public void setWantedState(WantedState state) {
+        this.wantedState = state;
     }
 
     /**
-     * The function `getRobotPose` returns the robot's pose after checking and updating it.
+     * Lock the robot's heading to the given rotation while the pilot steers translation.
      *
-     * @return The `getRobotPose` method is returning the robot's current pose after calling the
-     *     `seedCheckedPose` method with the current pose as an argument.
+     * @param rotation Target heading
      */
-    public Pose2d getRobotPose() {
-        Pose2d pose = getState().Pose;
-        return keepPoseOnField(pose);
+    public void setTargetRotation(Rotation2d rotation) {
+        this.desiredRotation = rotation;
+        setWantedState(WantedState.ROTATION_LOCK);
     }
 
-    // Keep the robot on the field
+    /**
+     * Drive to a field-relative pose, holding the pose's rotation with the heading controller.
+     *
+     * @param pose Target pose
+     */
+    public void setDesiredPoseForDriveToPoint(Pose2d pose) {
+        this.desiredPoseForDriveToPoint = pose;
+        setWantedState(WantedState.DRIVE_TO_POINT);
+    }
+
+    public void setTeleopVelocityCoefficient(double teleopVelocityCoefficient) {
+        this.teleopVelocityCoefficient = teleopVelocityCoefficient;
+    }
+
+    public void setRotationVelocityCoefficient(double rotationVelocityCoefficient) {
+        this.rotationVelocityCoefficient = rotationVelocityCoefficient;
+    }
+
+    public boolean isAtDriveToPointSetpoint() {
+        double distance =
+                desiredPoseForDriveToPoint
+                        .getTranslation()
+                        .minus(getRobotPose().getTranslation())
+                        .getNorm();
+        return distance < TRANSLATION_ERROR_MARGIN_METERS;
+    }
+
+    public boolean isAtDesiredRotation() {
+        return isAtDesiredRotation(Units.degreesToRadians(10.0));
+    }
+
+    public boolean isAtDesiredRotation(double toleranceRadians) {
+        return Math.abs(DRIVE_AT_ANGLE_REQUEST.HeadingController.getPositionError())
+                < toleranceRadians;
+    }
+
+    // ------------------------------------------------------------------------
+    // Pose / field helpers
+    // ------------------------------------------------------------------------
+    public Pose2d getRobotPose() {
+        return keepPoseOnField(getState().Pose);
+    }
+
     private Pose2d keepPoseOnField(Pose2d pose) {
         double halfRobot = config.getRobotLength() / 2;
-        double x = pose.getX();
-        double y = pose.getY();
-
-        double newX = Util.limit(x, halfRobot, Field.getFieldLength() - halfRobot);
-        double newY = Util.limit(y, halfRobot, Field.getFieldWidth() - halfRobot);
-
-        if (x != newX || y != newY) {
+        double newX = Util.limit(pose.getX(), halfRobot, FieldConstants.fieldLength - halfRobot);
+        double newY = Util.limit(pose.getY(), halfRobot, FieldConstants.fieldWidth - halfRobot);
+        if (pose.getX() != newX || pose.getY() != newY) {
             pose = new Pose2d(new Translation2d(newX, newY), pose.getRotation());
             resetPose(pose);
         }
@@ -166,67 +322,19 @@ public class Swerve extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder>
                 () -> Util.inRange(() -> getRobotPose().getY(), () -> minYmeter, () -> maxYmeter));
     }
 
-    /**
-     * This method is used to check if the robot is in the X zone of the field flips the values if
-     * Red Alliance
-     *
-     * @param minXmeter
-     * @param maxXmeter
-     * @return
-     */
-    public Trigger inXzoneAlliance(double minXmeter, double maxXmeter) {
-        return new Trigger(
-                () ->
-                        Util.inRange(
-                                FieldHelpers.flipXifRed(getRobotPose().getX()),
-                                minXmeter,
-                                maxXmeter));
-    }
-
-    /**
-     * This method is used to check if the robot is in the Y zone of the field flips the values if
-     * Red Alliance
-     *
-     * @param minYmeter
-     * @param maxYmeter
-     * @return
-     */
-    public Trigger inYzoneAlliance(double minYmeter, double maxYmeter) {
-        return new Trigger(
-                () ->
-                        Util.inRange(
-                                FieldHelpers.flipYifRed(getRobotPose().getY()),
-                                minYmeter,
-                                maxYmeter));
-    }
-
-    // Used to set a control request to the swerve module, ignores disable so commands are
-    // continuous.
-    Command applyRequest(Supplier<SwerveRequest> requestSupplier) {
-        return run(() -> this.setControl(requestSupplier.get())).ignoringDisable(true);
-    }
-
     public ChassisSpeeds getCurrentRobotChassisSpeeds() {
         return getKinematics().toChassisSpeeds(getState().ModuleStates);
     }
 
-    private void setPilotPerspective() {
-        /* Periodically try to apply the operator perspective */
-        /* If we haven't applied the operator perspective before, then we should apply it regardless of DS state */
-        /* This allows us to correct the perspective in case the robot code restarts mid-match */
-        /* Otherwise, only check and apply the operator perspective if the DS is disabled */
-        /* This ensures driving behavior doesn't change until an explicit disable event occurs during testing*/
-        if (!hasAppliedPilotPerspective || DriverStation.isDisabled()) {
-            DriverStation.getAlliance()
-                    .ifPresent(
-                            allianceColor -> {
-                                this.setOperatorPerspectiveForward(
-                                        allianceColor == Alliance.Red
-                                                ? config.getRedAlliancePerspectiveRotation()
-                                                : config.getBlueAlliancePerspectiveRotation());
-                                hasAppliedPilotPerspective = true;
-                            });
-        }
+    // ------------------------------------------------------------------------
+    // Rotation helpers
+    // ------------------------------------------------------------------------
+    Rotation2d getRotation() {
+        return getRobotPose().getRotation();
+    }
+
+    double getRotationRadians() {
+        return getRotation().getRadians();
     }
 
     protected void reorient(double angleDegrees) {
@@ -238,273 +346,105 @@ public class Swerve extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder>
     }
 
     protected Command reorientPilotAngle(double angleDegrees) {
-        return runOnce(
-                () -> {
-                    double output;
-                    output = FieldHelpers.flipAngleIfRed(angleDegrees);
-                    reorient(output);
-                });
+        return runOnce(() -> reorient(DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue)
+                                        == DriverStation.Alliance.Blue ? angleDegrees + 180 : angleDegrees));
     }
 
     protected double getClosestCardinal() {
         double heading = getRotation().getRadians();
-        if (heading > -Math.PI / 4 && heading <= Math.PI / 4) {
-            return 0;
-        } else if (heading > Math.PI / 4 && heading <= 3 * Math.PI / 4) {
-            return 90;
-        } else if (heading > 3 * Math.PI / 4 || heading <= -3 * Math.PI / 4) {
-            return 180;
-        } else {
-            return 270;
-        }
+        if (heading > -Math.PI / 4 && heading <= Math.PI / 4) return 0;
+        else if (heading > Math.PI / 4 && heading <= 3 * Math.PI / 4) return 90;
+        else if (heading > 3 * Math.PI / 4 || heading <= -3 * Math.PI / 4) return 180;
+        else return 270;
     }
 
     protected double getClosest45() {
-        double angleRadians = getRotation().getRadians();
-        double angleDegrees = Math.toDegrees(angleRadians);
-
-        // Normalize the angle to be within 0 to 360 degrees
-        angleDegrees = angleDegrees % 360;
-        if (angleDegrees < 0) {
-            angleDegrees += 360;
-        }
-
-        // Round to the nearest multiple of 45 degrees
-        double closest45Degrees = Math.round(angleDegrees / 45.0) * 45.0;
-
-        // Convert back to radians and return as a Rotation2d
-        return Rotation2d.fromDegrees(closest45Degrees).getRadians();
+        double angleDegrees = getRotation().getDegrees() % 360;
+        if (angleDegrees < 0) angleDegrees += 360;
+        return Rotation2d.fromDegrees(Math.round(angleDegrees / 45.0) * 45.0).getRadians();
     }
 
     protected double getClosestFieldAngle() {
-        // Step 1: Read the angle in radians
-        double angleRadians = getRotation().getRadians();
-
-        // Step 2: Convert the angle from radians to degrees
-        double angleDegrees = Math.toDegrees(angleRadians);
-
-        // Step 3: Define a table of angles in degrees
+        double angleDegrees = getRotation().getDegrees();
         double[] angleTable = {0, 180, 126, -126, 54, -54, 60, -60, 120, -120, 90, -90};
-
-        // Step 4: Find the nearest angle from the table
         double closestAngle = angleTable[0];
-        double minDifference = getRotationDifference(angleDegrees, closestAngle);
-
+        double minDiff = getRotationDifference(angleDegrees, closestAngle);
         for (double angle : angleTable) {
-            double difference = getRotationDifference(angleDegrees, angle);
-            if (difference < minDifference) {
-                minDifference = difference;
+            double diff = getRotationDifference(angleDegrees, angle);
+            if (diff < minDiff) {
+                minDiff = diff;
                 closestAngle = angle;
             }
         }
-
-        // Step 5: Return the nearest angle in Radians
         return Math.toRadians(closestAngle);
     }
 
     protected Command cardinalReorient() {
-        return runOnce(
-                () -> {
-                    double angleDegrees = getClosestCardinal();
-                    reorient(angleDegrees);
-                });
+        return runOnce(() -> reorient(getClosestCardinal()));
     }
 
     public boolean frontClosestToAngle(double angleDegrees) {
         double heading = getRotation().getDegrees();
-        double flippedHeading;
-        if (heading > 0) {
-            flippedHeading = heading - 180;
-        } else {
-            flippedHeading = heading + 180;
-        }
-        double frontDifference = getRotationDifference(heading, angleDegrees);
-        double flippedDifference = getRotationDifference(flippedHeading, angleDegrees);
-
-        return frontDifference < flippedDifference;
+        double flippedHeading = heading > 0 ? heading - 180 : heading + 180;
+        return getRotationDifference(heading, angleDegrees)
+                < getRotationDifference(flippedHeading, angleDegrees);
     }
 
-    // Helper method to calculate the shortest angle difference
     public double getRotationDifference(double angle1, double angle2) {
         double diff = Math.abs(angle1 - angle2) % 360;
         return diff > 180 ? 360 - diff : diff;
     }
 
-    // --------------------------------------------------------------------------------
-    // Rotation Controller
-    // --------------------------------------------------------------------------------
-
-    Rotation2d getRotation() {
-        return getRobotPose().getRotation();
-    }
-
-    double getRotationRadians() {
-        return getRobotPose().getRotation().getRadians();
-    }
-
-    // --------------------------------------------------------------------------------
-    // Tag Center Align Controller
-    // --------------------------------------------------------------------------------
-    // void resetTagCenterAlignController(double currentMeters) {
-    //     tagCenterAlignController.reset(currentMeters);
-    // }
-
-    double calculateTagCenterAlignController(
-            DoubleSupplier targetMeters, DoubleSupplier currentMeters) {
-        return tagCenterAlignController.calculate(
-                targetMeters.getAsDouble(), currentMeters.getAsDouble());
-    }
-
-    public boolean atTagCenterGoal(double currentMeters) {
-        return tagCenterAlignController.atGoal(currentMeters);
-    }
-
-    // --------------------------------------------------------------------------------
-    // Tag Distance Align Controller
-    // --------------------------------------------------------------------------------
-    void resetTagDistanceAlignController(double currentMeters) {
-        tagDistanceAlignController.reset(currentMeters);
-    }
-
-    double calculateTagDistanceAlignController(DoubleSupplier targetArea) {
-        boolean front = true;
-        if (Robot.getVision().frontLL.targetInView()) {
-            front = true;
-        } else if (Robot.getVision().backLL.targetInView()) {
-            front = false;
-        }
-
-        double output =
-                tagDistanceAlignController.calculate(
-                        targetArea.getAsDouble(), Robot.getVision().getTagTA());
-
-        if (Robot.getVision().tagsInView()) {
-            return front ? output : -output;
-        } else {
-            return 0;
-        }
-    }
-
-    public boolean atTagDistanceGoal(double currentArea) {
-        return tagDistanceAlignController.atGoal(currentArea);
-    }
-
-    // --------------------------------------------------------------------------------
-    // Translation X Controller
-    // --------------------------------------------------------------------------------
-    void resetXController() {
-        xController.reset(getRobotPose().getX(), getCurrentRobotChassisSpeeds().vxMetersPerSecond);
-    }
-
-    DoubleSupplier calculateXController(DoubleSupplier targetMeters) {
-        return () -> xController.calculate(targetMeters.getAsDouble(), getRobotPose().getX());
-    }
-
-    // --------------------------------------------------------------------------------
-    // Translation Y Controller
-    // --------------------------------------------------------------------------------
-    void resetYController() {
-        yController.reset(getRobotPose().getY(), getCurrentRobotChassisSpeeds().vyMetersPerSecond);
-    }
-
-    DoubleSupplier calculateYController(DoubleSupplier targetMeters) {
-        return () -> yController.calculate(targetMeters.getAsDouble(), getRobotPose().getY());
-    }
-
-    // --------------------------------------------------------------------------------
-    // Path Planner
-    // --------------------------------------------------------------------------------
-    private SwerveSetpointGenerator setpointGenerator;
-    private SwerveSetpoint previousSetpoint;
-
+    // ------------------------------------------------------------------------
+    // PathPlanner configuration
+    // ------------------------------------------------------------------------
     private void configurePathPlanner() {
-
-        // Seed robot to mid field at start (Paths will change this starting position)
         resetPose(
                 new Pose2d(
                         Units.feetToMeters(27.0),
                         Units.feetToMeters(27.0 / 2.0),
                         config.getBlueAlliancePerspectiveRotation()));
 
-        RobotConfig robotConfig = null; // Initialize with null in case of exception
+        RobotConfig robotConfig = null;
         try {
-            robotConfig =
-                    RobotConfig.fromGUISettings(); // Takes config from Robot Config on Pathplanner
-            // Settings
+            robotConfig = RobotConfig.fromGUISettings();
         } catch (Exception e) {
-            e.printStackTrace(); // Fallback to a default configuration
+            e.printStackTrace();
         }
 
-        setpointGenerator =
-                new SwerveSetpointGenerator(
-                        robotConfig,
-                        Units.rotationsToRadians(
-                                10.0) // Replace with your max module rotation speed
-                        );
-
-        ChassisSpeeds currentSpeeds = getCurrentRobotChassisSpeeds();
-        SwerveModuleState[] currentStates = getState().ModuleStates;
-        previousSetpoint =
-                new SwerveSetpoint(currentSpeeds, currentStates, DriveFeedforwards.zeros(4));
-
         AutoBuilder.configure(
-                () -> this.getState().Pose, // Supplier of current robot pose
-                this::resetPose, // Consumer for seeding pose against auto
+                () -> this.getState().Pose,
+                this::resetPose,
                 this::getCurrentRobotChassisSpeeds,
-                speeds ->
-                        this.setControl(
-                                AutoRequest.withSpeeds(
-                                        speeds)), // Consumer of ChassisSpeeds to drive the robot
+                speeds -> this.setControl(PATHPLANNER_REQUEST.withSpeeds(speeds)),
                 new PPHolonomicDriveController(
                         new PIDConstants(6, 0, 0), new PIDConstants(8, 0, 0), Robot.kDefaultPeriod),
                 robotConfig,
-                () ->
-                        DriverStation.getAlliance().orElse(Alliance.Blue)
-                                == Alliance.Red, // Assume the path needs to be flipped for Red vs
-                // Blue, this is normally the case
-                this); // Subsystem for requirements
+                () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
+                this);
     }
 
-    /**
-     * This method will take in desired robot-relative chassis speeds, generate a swerve setpoint,
-     * then set the target state for each module
-     *
-     * @param speeds The desired robot-relative speeds
-     */
-    public void driveFieldRelative(
-            DoubleSupplier fwdPositive, DoubleSupplier leftPositive, DoubleSupplier ccwPositive) {
-        Rotation2d rotation = getRotation();
-        // Flip the rotation if we are on the red alliance, so field-relative controls are correct
-        rotation = FieldHelpers.flipAngleIfRed(rotation);
-
-        ChassisSpeeds speeds =
-                ChassisSpeeds.fromFieldRelativeSpeeds(
-                        fwdPositive.getAsDouble(),
-                        leftPositive.getAsDouble(),
-                        ccwPositive.getAsDouble(),
-                        rotation);
-        previousSetpoint =
-                setpointGenerator.generateSetpoint(
-                        previousSetpoint, speeds, 0.02 // loop time
-                        );
-        setControl(AutoRequest.withSpeeds(previousSetpoint.robotRelativeSpeeds()));
+    // ------------------------------------------------------------------------
+    // Telemetry
+    // ------------------------------------------------------------------------
+    protected void log(SwerveDriveState state) {
+        Telemetry.log("Swerve/Pose", state.Pose);
+        Telemetry.log("Swerve/TargetStates", state.ModuleTargets);
+        Telemetry.log("Swerve/MeasuredStates", state.ModuleStates);
+        Telemetry.log("Swerve/MeasuredSpeeds", state.Speeds);
     }
 
-    // --------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------
     // Simulation
-    // --------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------
     private void startSimThread() {
         lastSimTime = Utils.getCurrentTimeSeconds();
-
-        /* Run simulation at a faster rate so PID gains behave more reasonably */
         simNotifier =
                 new Notifier(
                         () -> {
                             final double currentTime = Utils.getCurrentTimeSeconds();
                             double deltaTime = currentTime - lastSimTime;
                             lastSimTime = currentTime;
-
-                            /* use the measured time delta, get battery voltage from WPILib */
                             updateSimState(deltaTime, RobotController.getBatteryVoltage());
                         });
         simNotifier.startPeriodic(config.getSimLoopPeriod());

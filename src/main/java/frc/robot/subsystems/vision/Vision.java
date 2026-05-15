@@ -17,10 +17,8 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
-import frc.reefscape.FieldHelpers;
-import frc.reefscape.offsets.HomeOffsets;
+import frc.reefscape.FieldConstants;
 import frc.robot.Robot;
-import frc.robot.RobotStates;
 import frc.spectrumLib.Telemetry;
 import frc.spectrumLib.Telemetry.PrintPriority;
 import frc.spectrumLib.util.Util;
@@ -71,11 +69,7 @@ public class Vision implements NTSendable, Subsystem {
 
     /** Limelights */
     @Getter public final Limelight frontLL;
-
-    // private static final HomeOffsets offsets;
-    private static final HomeOffsets offsets = new HomeOffsets();
-
-    public final Limelight backLL;
+    @Getter public final Limelight backLL;
 
     public final Limelight[] allLimelights;
 
@@ -145,7 +139,6 @@ public class Vision implements NTSendable, Subsystem {
         setLimeLightOrientation();
         disabledLimelightUpdates();
         enabledLimelightUpdates();
-        autonLimelightUpdates();
 
         Robot.getField2d().getObject(frontLL.getCameraName()).setPose(getFrontMegaTag2Pose());
         Robot.getField2d().getObject(backLL.getCameraName()).setPose(getBackMegaTag2Pose());
@@ -232,37 +225,6 @@ public class Vision implements NTSendable, Subsystem {
 
             try {
                 addMegaTag1_VisionInput(frontLL, false);
-            } catch (Exception e) {
-                Telemetry.print("FRONT MT1: Vision pose not present but tried to access it");
-            }
-        }
-    }
-
-    private void autonLimelightUpdates() {
-        if (Util.autoMode.getAsBoolean() && RobotStates.poseUpdate.getAsBoolean()) {
-            for (Limelight limelight : allLimelights) {
-                limelight.setIMUmode(1);
-            }
-            // try {
-            //     addMegaTag2_VisionInputAuton(backLL);
-            // } catch (Exception e) {
-            //     Telemetry.print("REAR MT2: Vision pose not present but tried to access it");
-            // }
-
-            try {
-                addMegaTag2_VisionInputAuton(frontLL);
-            } catch (Exception e) {
-                Telemetry.print("FRONT MT2: Vision pose not present but tried to access it");
-            }
-
-            // try {
-            //     addMegaTag1_VisionInputAuton(backLL, false);
-            // } catch (Exception e) {
-            //     Telemetry.print("REAR MT1: Vision pose not present but tried to access it");
-            // }
-
-            try {
-                addMegaTag1_VisionInputAuton(frontLL, false);
             } catch (Exception e) {
                 Telemetry.print("FRONT MT1: Vision pose not present but tried to access it");
             }
@@ -629,7 +591,7 @@ public class Vision implements NTSendable, Subsystem {
 
     private boolean rejectionCheck(Pose2d pose, double targetSize) {
         /* rejections */
-        if (FieldHelpers.poseOutOfField(pose)) {
+        if (FieldConstants.outOfField(pose)) {
             return true;
         }
 
@@ -689,7 +651,7 @@ public class Vision implements NTSendable, Subsystem {
             Pose2d pose;
 
             // Check if the vision pose is bad and don't trust it
-            if (FieldHelpers.poseOutOfField(botpose3D)) { // pose out of field
+            if (FieldConstants.outOfField(botpose3D.toPose2d())) { // pose out of field
                 Telemetry.log("Pose out of field", reject);
                 reject = true;
             } else if (Math.abs(botpose3D.getZ()) > 0.25) { // when in air
@@ -820,42 +782,6 @@ public class Vision implements NTSendable, Subsystem {
         } else {
             return 0;
         }
-    }
-
-    @SuppressWarnings("static-access")
-    public Pose2d getReefOffsetFromTag() {
-        int closestTagID = Robot.getVision().getClosestTagID();
-
-        if (closestTagID < 6 || closestTagID == 16 || closestTagID > 22) {
-            closestTagID = FieldHelpers.getReefZoneTagID(Robot.getSwerve().getRobotPose());
-            if (closestTagID < 0) {
-                return Robot.getSwerve().getRobotPose();
-            }
-        }
-
-        double reefTagDistanceOffset = offsets.getReefTagDistanceOffset(closestTagID);
-        double reefTagCenterOffset = offsets.getReefTagCenterOffset(closestTagID);
-
-        return FieldHelpers.getXYOffsetFromTag(
-                closestTagID, reefTagDistanceOffset, reefTagCenterOffset);
-    }
-
-    @SuppressWarnings("static-access")
-    public Pose2d getReefOffsetFromTagAlgae() {
-        int closestTagID = Robot.getVision().getClosestTagID();
-
-        if (closestTagID < 6 || closestTagID == 16 || closestTagID > 22) {
-            closestTagID = FieldHelpers.getReefZoneTagID(Robot.getSwerve().getRobotPose());
-            if (closestTagID < 0) {
-                return Robot.getSwerve().getRobotPose();
-            }
-        }
-
-        double reefTagDistanceOffset = offsets.getReefTagDistanceOffset(closestTagID) + 0.5;
-        double reefTagCenterOffset = 0;
-
-        return FieldHelpers.getXYOffsetFromTag(
-                closestTagID, reefTagDistanceOffset, reefTagCenterOffset);
     }
 
     // ------------------------------------------------------------------------------

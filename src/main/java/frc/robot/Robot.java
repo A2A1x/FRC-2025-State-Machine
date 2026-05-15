@@ -26,22 +26,8 @@ import frc.robot.operator.Operator;
 import frc.robot.operator.Operator.OperatorConfig;
 import frc.robot.pilot.Pilot;
 import frc.robot.pilot.Pilot.PilotConfig;
-import frc.robot.subsystems.claw.Claw;
-import frc.robot.subsystems.claw.Claw.ClawConfig;
-import frc.robot.subsystems.climbIntake.ClimbIntake;
-import frc.robot.subsystems.climbIntake.ClimbIntake.ClimbIntakeConfig;
-import frc.robot.subsystems.climbPivot.ClimbPivot;
-import frc.robot.subsystems.climbPivot.ClimbPivot.ClimbPivotConfig;
 import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.elevator.Elevator.ElevatorConfig;
-import frc.robot.subsystems.groundIntake.GroundIntake;
-import frc.robot.subsystems.groundIntake.GroundIntake.GroundIntakeConfig;
-import frc.robot.subsystems.intakePivot.IntakePivot;
-import frc.robot.subsystems.intakePivot.IntakePivot.IntakePivotConfig;
-import frc.robot.subsystems.leds.LedFull;
-import frc.robot.subsystems.leds.LedFull.LedFullConfig;
-import frc.robot.subsystems.shoulder.Shoulder;
-import frc.robot.subsystems.shoulder.Shoulder.ShoulderConfig;
 import frc.robot.subsystems.swerve.Swerve;
 import frc.robot.subsystems.swerve.SwerveConfig;
 import frc.robot.subsystems.vision.Vision;
@@ -75,29 +61,15 @@ public class Robot extends SpectrumRobot {
         public PilotConfig pilot = new PilotConfig();
         public OperatorConfig operator = new OperatorConfig();
         public ElevatorConfig elevator = new ElevatorConfig();
-        public ShoulderConfig shoulder = new ShoulderConfig();
-        public GroundIntakeConfig groundIntake = new GroundIntakeConfig();
-        public IntakePivotConfig intakePivot = new IntakePivotConfig();
-        public LedFullConfig leds = new LedFullConfig();
-        public ClimbPivotConfig climbPivot = new ClimbPivotConfig();
         public VisionConfig vision = new VisionConfig();
-        public ClawConfig claw = new ClawConfig();
-        public ClimbIntakeConfig climbIntake = new ClimbIntakeConfig();
     }
 
     @Getter private static Swerve swerve;
     @Getter private static Elevator elevator;
-    @Getter private static GroundIntake groundIntake;
-    @Getter private static IntakePivot intakePivot;
-    @Getter private static LedFull leds;
     @Getter private static Operator operator;
     @Getter private static Pilot pilot;
     @Getter private static Vision vision;
     @Getter private static Auton auton;
-    @Getter private static ClimbPivot climbPivot;
-    @Getter private static Shoulder shoulder;
-    @Getter private static Claw claw;
-    @Getter private static ClimbIntake climbIntake;
     public static boolean commandInit = false;
 
     public Robot() {
@@ -122,24 +94,11 @@ public class Robot extends SpectrumRobot {
              */
             double canInitDelay = 0.1; // Delay between any mechanism with motor/can configs
 
-            leds = new LedFull(config.leds);
             operator = new Operator(config.operator);
             pilot = new Pilot(config.pilot);
             swerve = new Swerve(config.swerve);
             Timer.delay(canInitDelay);
             elevator = new Elevator(config.elevator);
-            Timer.delay(canInitDelay);
-            climbPivot = new ClimbPivot(config.climbPivot);
-            Timer.delay(canInitDelay);
-            climbIntake = new ClimbIntake(config.climbIntake);
-            Timer.delay(canInitDelay);
-            shoulder = new Shoulder(config.shoulder);
-            Timer.delay(canInitDelay);
-            claw = new Claw(config.claw);
-            Timer.delay(canInitDelay);
-            intakePivot = new IntakePivot(config.intakePivot);
-            Timer.delay(canInitDelay);
-            groundIntake = new GroundIntake(config.groundIntake);
             Timer.delay(canInitDelay);
             vision = new Vision(config.vision);
             Timer.delay(canInitDelay);
@@ -170,35 +129,6 @@ public class Robot extends SpectrumRobot {
                     case 1 -> "Uncommitted changes";
                     default -> "Unknown";
                 });
-    }
-
-    /**
-     * This method cancels all commands and returns subsystems to their default commands and the
-     * gamepad configs are reset so that new bindings can be assigned based on mode This method
-     * should be called when each mode is initialized
-     */
-    public void resetCommandsAndButtons() {
-        CommandScheduler.getInstance().cancelAll(); // Disable any currently running commands
-        CommandScheduler.getInstance().getActiveButtonLoop().clear();
-
-        // Reset Config for all gamepads and other button bindings
-        pilot.resetConfig();
-        operator.resetConfig();
-
-        // Bind Triggers for all subsystems
-        setupStates();
-        RobotStates.setupStates();
-        CommandScheduler.getInstance().schedule(RobotStates.clearStates());
-    }
-
-    public void clearCommandsAndButtons() {
-        CommandScheduler.getInstance().cancelAll(); // Disable any currently running commands
-        CommandScheduler.getInstance().getActiveButtonLoop().clear();
-
-        // Bind Triggers for all subsystems
-        setupStates();
-        RobotStates.setupStates();
-        CommandScheduler.getInstance().schedule(RobotStates.clearStates());
     }
 
     public void setupSmartDashboardData() {
@@ -241,8 +171,6 @@ public class Robot extends SpectrumRobot {
     @Override
     public void disabledInit() {
         Telemetry.print("### Disabled Init Starting ### ");
-        clearCommandsAndButtons();
-        resetCommandsAndButtons();
 
         if (!commandInit) {
             Command autonStartCommand =
@@ -348,7 +276,6 @@ public class Robot extends SpectrumRobot {
 
     @Override
     public void disabledExit() {
-        RobotStates.coastMode.setFalse(); // Ensure motors are in brake mode
         Telemetry.print("### Disabled Exit### ");
     }
 
@@ -383,7 +310,6 @@ public class Robot extends SpectrumRobot {
     public void teleopInit() {
         try {
             Telemetry.print("!!! Teleop Init Starting !!! ");
-            resetCommandsAndButtons();
             field2d.getObject("path").setPoses(new ArrayList<>()); // clears auto visualizer
 
             Telemetry.print("!!! Teleop Init Complete !!! ");
@@ -417,7 +343,6 @@ public class Robot extends SpectrumRobot {
         try {
 
             Telemetry.print("~~~ Test Init Starting ~~~ ");
-            resetCommandsAndButtons();
 
             Telemetry.print("~~~ Test Init Complete ~~~ ");
         } catch (Throwable t) {

@@ -13,15 +13,5 @@ public class OM2025 extends Config {
         pilot.setAttached(true);
         operator.setAttached(true);
         elevator.setAttached(true);
-        claw.setAttached(true);
-        shoulder.setAttached(true);
-        groundIntake.setAttached(true);
-        climbPivot.setAttached(true);
-        climbIntake.setAttached(true);
-        intakePivot.setAttached(true);
-
-        shoulder.setCANcoderAttached(false);
-        shoulder.setCANcoderOffset(
-                1.104248 - 0.249756); // add -0.249756 to the inverse of the position
     }
 }

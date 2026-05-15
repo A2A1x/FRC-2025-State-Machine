@@ -9,7 +9,6 @@ import edu.wpi.first.wpilibj.util.Color8Bit;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import frc.robot.RobotSim;
-import frc.robot.RobotStates;
 import frc.spectrumLib.Rio;
 import frc.spectrumLib.Telemetry;
 import frc.spectrumLib.mechanism.Mechanism;
@@ -134,11 +133,9 @@ public class Elevator extends Mechanism {
     public void periodic() {}
 
     public void setupStates() {
-        ElevatorStates.setStates();
     }
 
     public void setupDefaultCommand() {
-        ElevatorStates.setupDefaultCommand();
     }
 
     /*-------------------
@@ -216,25 +213,6 @@ public class Elevator extends Mechanism {
 
     public Command move(DoubleSupplier rotations) {
         return run(() -> setMMPositionFoc(rotations));
-    }
-
-    public Command slowMove(DoubleSupplier shrinkRotations, DoubleSupplier exRotations) {
-        return run(
-                () -> {
-                    if (!RobotStates.shrink.getAsBoolean()) {
-                        setDynMMPositionFoc(
-                                exRotations,
-                                () -> config.getMmCruiseVelocity(),
-                                () -> config.getSlowMmAcceleration(),
-                                () -> config.getSlowMmJerk());
-                    } else {
-                        setDynMMPositionFoc(
-                                shrinkRotations,
-                                () -> config.getMmCruiseVelocity(),
-                                () -> config.getSlowMmAcceleration(),
-                                () -> config.getSlowMmJerk());
-                    }
-                });
     }
 
     public Command zeroElevatorRoutine() {
