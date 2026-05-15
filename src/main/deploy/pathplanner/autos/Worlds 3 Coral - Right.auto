@@ -1,0 +1,43 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "path",
+          "data": {
+            "pathName": "1 - Coral Right"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "2 - Coral Right"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "3 - Coral Right"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "4 - Coral Right"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "3 - Coral Right"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": "Visualizer Autos",
+  "choreoAuto": false
+}
