@@ -1,4 +1,4 @@
-package frc.robot.climb;
+package frc.robot.climbPivot;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfigurator;
@@ -22,20 +22,20 @@ import frc.spectrumLib.sim.ArmSim;
 import java.util.function.DoubleSupplier;
 import lombok.*;
 
-public class Climb extends Mechanism {
+public class ClimbPivot extends Mechanism {
 
-    public static class ClimbConfig extends Config {
+    public static class ClimbPivotConfig extends Config {
 
-        @Getter private final double maxRotations = 0.335; // 0.315; // 0.36;
-        @Getter private final double minRotations = -0.06;
+        @Getter private final double maxRotations = -9.5 / 25; // 0.315; // 0.36;
+        @Getter private final double minRotations = -85 / 25;
+
+        @Getter private final double startRotations = 0.05;
+
         /* Climb positions in degrees || 0 is horizontal */
         @Getter private final double home = 90;
-        @Getter private final double intake = 0;
-        @Getter private final double algaeFloorIntake = 30;
-        @Getter private final double prepClimber = 0;
-        @Getter private final double finishClimb = 100;
-        @Getter private final double coralFloorIntake = -10;
-        @Getter private final double processorScore = 60;
+
+        @Getter private final double prepClimber = 90;
+
         @Getter private final double latchOpen = 1;
         @Getter private final double latchClosed = 0;
 
@@ -45,16 +45,16 @@ public class Climb extends Mechanism {
         @Getter private final double zeroSpeed = -0.1;
         @Getter private final double holdMaxSpeedRPM = 18;
 
-        @Getter private final double currentLimit = 60; // 60
-        @Getter private final double torqueCurrentLimit = 180; // 180
+        @Getter private final double currentLimit = 300; // 60
+        @Getter private final double torqueCurrentLimit = 300; // 180
         @Getter private final double positionKp = 190;
         @Getter private final double positionKd = 40;
         @Getter private final double positionKv = 0;
         @Getter private final double positionKs = 0.3;
         @Getter private final double positionKa = 0.001;
         @Getter private final double positionKg = 2.9;
-        @Getter private final double mmCruiseVelocity = 1;
-        @Getter private final double mmAcceleration = 10;
+        @Getter private final double mmCruiseVelocity = 100;
+        @Getter private final double mmAcceleration = 100;
         @Getter private final double mmJerk = 0;
 
         /* Sim properties */
@@ -65,12 +65,12 @@ public class Climb extends Mechanism {
 
         @Getter private double length = 0.4;
 
-        public ClimbConfig() {
-            super("ClimbTop", 55, Rio.CANIVORE);
+        public ClimbPivotConfig() {
+            super("Climb", 55, Rio.CANIVORE);
             configPIDGains(0, positionKp, 0, positionKd);
             configFeedForwardGains(positionKs, positionKv, positionKa, positionKg);
             configMotionMagic(mmCruiseVelocity, mmAcceleration, mmJerk);
-            configGearRatio(99.5555555555); // 9t = 99.5555555555); 12t - 74.6666666667;
+            configGearRatio(25); // 9t = 99.5555555555); 12t - 74.6666666667;
             configSupplyCurrentLimit(currentLimit, true);
             configStatorCurrentLimit(torqueCurrentLimit, true);
             configForwardTorqueCurrentLimit(torqueCurrentLimit);
@@ -79,13 +79,12 @@ public class Climb extends Mechanism {
             configReverseSoftLimit(getMinRotations(), true);
             configForwardSoftLimit(getMaxRotations(), true);
             configNeutralBrakeMode(true);
-            configCounterClockwise_Positive();
+            configClockwise_Positive();
             configGravityType(true);
             setSimRatio(simRatio);
-            setFollowerConfigs(new FollowerConfig("ClimbBottom", 56, Rio.CANIVORE, false));
         }
 
-        public ClimbConfig modifyMotorConfig(TalonFX motor) {
+        public ClimbPivotConfig modifyMotorConfig(TalonFX motor) {
             TalonFXConfigurator configurator = motor.getConfigurator();
             TalonFXConfiguration talonConfigMod = getTalonConfig();
 
@@ -95,12 +94,12 @@ public class Climb extends Mechanism {
         }
     }
 
-    private ClimbConfig config;
+    private ClimbPivotConfig config;
     private SpectrumServo latchServo = new SpectrumServo(9);
     @Getter private SpectrumState latched = new SpectrumState("ClimbLatched");
     @Getter private ClimbSim sim;
 
-    public Climb(ClimbConfig config) {
+    public ClimbPivot(ClimbPivotConfig config) {
         super(config);
         this.config = config;
 
@@ -116,11 +115,11 @@ public class Climb extends Mechanism {
     public void periodic() {}
 
     public void setupStates() {
-        ClimbStates.setStates();
+        ClimbPivotStates.setStates();
     }
 
     public void setupDefaultCommand() {
-        ClimbStates.setupDefaultCommand();
+        ClimbPivotStates.setupDefaultCommand();
     }
 
     /*-------------------
@@ -140,10 +139,18 @@ public class Climb extends Mechanism {
         }
     }
 
+    // public void startClimb() {
+    //     if (config.isAttached()) {
+    //         moveToRotations(config::getStartRotations)
+    //                 .withTimeout(1)
+    //                 .andThen(moveToRotations(config::getMinRotations))
+    //                 .withTimeout(1);
+    //     }
+    // }
+
     private void setInitialPosition() {
         if (config.isAttached()) {
-            motor.setPosition(0.25);
-            followerMotors[0].setPosition(0.25);
+            motor.setPosition(0.15);
         }
     }
 
@@ -172,7 +179,7 @@ public class Climb extends Mechanism {
             // constructor
             {
                 setName("Climb.holdPosition");
-                addRequirements(Climb.this);
+                addRequirements(ClimbPivot.this);
             }
 
             @Override
@@ -260,13 +267,13 @@ public class Climb extends Mechanism {
                                     config.climbY,
                                     config.simRatio,
                                     config.length,
-                                    -30,
-                                    180,
+                                    -360,
+                                    360,
                                     90)
                             .setColor(new Color8Bit(Color.kBrown)),
                     mech,
                     climbMotorSim,
-                    config.getName());
+                    "2" + config.getName());
         }
     }
 }

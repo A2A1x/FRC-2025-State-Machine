@@ -1,4 +1,4 @@
-package frc.robot.intake;
+package frc.robot.claw;
 
 import com.ctre.phoenix6.sim.TalonFXSimState;
 import edu.wpi.first.networktables.NTSendableBuilder;
@@ -17,9 +17,11 @@ import java.util.function.DoubleSupplier;
 import lombok.Getter;
 import lombok.Setter;
 
-public class Intake extends Mechanism {
+public class Claw extends Mechanism {
 
-    public static class IntakeConfig extends Config {
+    public static class ClawConfig extends Config {
+
+        // TODO: tune these values
 
         @Getter private double hasGamePieceVelocity = 50;
         @Getter private double hasGamePieceCurrent = 80;
@@ -29,32 +31,25 @@ public class Intake extends Mechanism {
         // Algae Voltages and Current
         @Getter @Setter private double algaeIntakeVoltage = -9.0;
         @Getter @Setter private double algaeIntakeSupplyCurrent = 30.0;
-        @Getter @Setter private double algaeIntakeTorqueCurrent = -85.0;
+        @Getter @Setter private double algaeIntakeTorqueCurrent = 150.0;
 
         @Getter @Setter private double algaeScoreVoltage = 12.0;
-        @Getter @Setter private double algaeScoreSupplyCurrent = 30.0;
-        @Getter @Setter private double algaeScoreTorqueCurrent = 180.0;
+        @Getter @Setter private double algaeScoreSupplyCurrent = 40.0;
+        @Getter @Setter private double algaeScoreTorqueCurrent = -200.0;
 
         // Coral Voltages and Current
-        @Getter @Setter private double coralHoldVoltage = 9.0;
-        @Getter @Setter private double coralHoldSupplyCurrent = 30.0;
-        @Getter @Setter private double coralHoldTorqueCurrent = 28.0;
+        @Getter @Setter private double coralHoldVoltage = 2.5;
+        @Getter @Setter private double coralHoldSupplyCurrent = 10.0;
+        @Getter @Setter private double coralHoldTorqueCurrent = 5.0;
 
         @Getter @Setter private double coralIntakeVoltage = 12.0;
         @Getter @Setter private double coralIntakeSupplyCurrent = 30.0;
-        @Getter @Setter private double coralIntakeTorqueCurrent = 100.0;
 
-        @Getter @Setter private double coralGroundVoltage = 12.0;
-        @Getter @Setter private double coralGroundSupplyCurrent = 40.0;
-        @Getter @Setter private double coralGroundTorqueCurrent = 200.0;
+        @Getter @Setter private double coralIntakeTorqueCurrent = 25.0; // both lollipop and handoff
 
         @Getter @Setter private double coralScoreVoltage = -1;
         @Getter @Setter private double coralScoreSupplyCurrent = 12.0;
         @Getter @Setter private double coralScoreTorqueCurrent = -25.0;
-
-        @Getter @Setter private double coralL1ScoreVoltage = -8;
-        @Getter @Setter private double coralL1ScoreSupplyCurrent = 15.0;
-        @Getter @Setter private double coralL1ScoreTorqueCurrent = -30.0;
 
         /* Intake config values */
         @Getter private double currentLimit = 44;
@@ -64,15 +59,16 @@ public class Intake extends Mechanism {
         @Getter private double velocityKs = 14;
 
         /* Sim Configs */
-        @Getter private double intakeX = 0.8; // relative to elbow at 0 degrees
-        @Getter private double intakeY = 1.3; // relative to elbow at 0 degrees
+        @Getter private double intakeX = 0.8; // relative to shoulder at 0 degrees
+        @Getter private double intakeY = 1.35; // relative to shoulder at 0 degrees
         @Getter private double wheelDiameter = 5.0;
 
-        public IntakeConfig() {
-            super("Intake", 5, Rio.CANIVORE);
+        public ClawConfig() {
+            // TODO: change id
+            super("Claw", 5, Rio.CANIVORE);
             configPIDGains(0, velocityKp, 0, 0);
             configFeedForwardGains(velocityKs, velocityKv, 0, 0);
-            configGearRatio(1);
+            configGearRatio(12);
             configSupplyCurrentLimit(currentLimit, true);
             configStatorCurrentLimit(torqueCurrentLimit, true);
             configForwardTorqueCurrentLimit(torqueCurrentLimit);
@@ -82,10 +78,10 @@ public class Intake extends Mechanism {
         }
     }
 
-    private IntakeConfig config;
-    private CoralIntakeSim sim;
+    private ClawConfig config;
+    private ClawSim sim;
 
-    public Intake(IntakeConfig config) {
+    public Claw(ClawConfig config) {
         super(config);
         this.config = config;
 
@@ -98,11 +94,11 @@ public class Intake extends Mechanism {
     public void periodic() {}
 
     public void setupStates() {
-        IntakeStates.setStates();
+        ClawStates.setStates();
     }
 
     public void setupDefaultCommand() {
-        IntakeStates.setupDefaultCommand();
+        ClawStates.setupDefaultCommand();
     }
 
     /*-------------------
@@ -213,7 +209,7 @@ public class Intake extends Mechanism {
     public void simulationInit() {
         if (isAttached()) {
             // Create a new RollerSim with the left view, the motor's sim state, and a 6 in diameter
-            sim = new CoralIntakeSim(RobotSim.leftView, motor.getSimState());
+            sim = new ClawSim(RobotSim.leftView, motor.getSimState());
         }
     }
 
@@ -226,12 +222,12 @@ public class Intake extends Mechanism {
         }
     }
 
-    class CoralIntakeSim extends RollerSim {
-        public CoralIntakeSim(Mechanism2d mech, TalonFXSimState coralRollerMotorSim) {
+    class ClawSim extends RollerSim {
+        public ClawSim(Mechanism2d mech, TalonFXSimState coralRollerMotorSim) {
             super(
                     new RollerConfig(config.wheelDiameter)
                             .setPosition(config.intakeX, config.intakeY)
-                            .setMount(Robot.getElbow().getSim()),
+                            .setMount(Robot.getShoulder().getSim()),
                     mech,
                     coralRollerMotorSim,
                     config.getName());

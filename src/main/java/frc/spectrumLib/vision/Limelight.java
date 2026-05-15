@@ -78,7 +78,8 @@ public class Limelight {
 
     public Limelight(String name, boolean attached) {
         cameraName = name;
-        config = new LimelightConfig(name).setAttached(attached);
+        config = new LimelightConfig(name);
+        config.setAttached(attached);
     }
 
     public Limelight(String name, int pipeline) {

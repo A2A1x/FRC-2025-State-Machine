@@ -20,29 +20,34 @@ public class ShoulderStates {
     public static final Trigger isAutonNetPosition =
             shoulder.aboveDegrees(config::getAutonShoulderNetChecker, config::getTolerance);
 
-    public static final Trigger isL1Coral =
-            shoulder.atDegrees(config::getExL1Coral, config::getTolerance)
+    public static final Trigger isLow = shoulder.atDegrees(config::getIsLow, () -> 90);
+    //     .or(
+    //             shoulder.atDegrees(() -> -config.getIsLow(), () -> 90)
+    //                     .and(reverse));
+
+    public static final Trigger isHandOff =
+            shoulder.atDegrees(config::getHandOff, config::getTolerance)
                     .and(reverse.not())
                     .or(
-                            shoulder.atDegrees(() -> -config.getExL1Coral(), config::getTolerance)
+                            shoulder.atDegrees(() -> -config.getHandOff(), config::getTolerance)
                                     .and(reverse));
     public static final Trigger isL2Coral =
-            shoulder.atDegrees(config::getExL2Coral, config::getTolerance)
+            shoulder.atDegrees(config::getL2Coral, () -> (config.getTolerance() + 3))
                     .and(reverse.not())
                     .or(
-                            shoulder.atDegrees(() -> -config.getExL2Coral(), config::getTolerance)
+                            shoulder.atDegrees(() -> -config.getL2Coral(), config::getTolerance)
                                     .and(reverse));
     public static final Trigger isL3Coral =
-            shoulder.atDegrees(config::getExL3Coral, config::getTolerance)
+            shoulder.atDegrees(config::getL3Coral, config::getTolerance)
                     .and(reverse.not())
                     .or(
-                            shoulder.atDegrees(() -> -config.getExL3Coral(), config::getTolerance)
+                            shoulder.atDegrees(() -> -config.getL3Coral(), config::getTolerance)
                                     .and(reverse));
     public static final Trigger isL4Coral =
-            shoulder.atDegrees(config::getExL4Coral, config::getTolerance)
+            shoulder.atDegrees(config::getL4Coral, config::getTolerance)
                     .and(reverse.not())
                     .or(
-                            shoulder.atDegrees(() -> -config.getExL4Coral(), config::getTolerance)
+                            shoulder.atDegrees(() -> -config.getL4Coral(), config::getTolerance)
                                     .and(reverse));
 
     public static final Trigger isL2Algae =
@@ -61,37 +66,34 @@ public class ShoulderStates {
     public static void setupDefaultCommand() {
         shoulder.setDefaultCommand(
                 log(shoulder.runHoldShoulder().withName("Shoulder.HoldDefault")));
-        // shoulder.runStop());
+        // shoulder.runStop()););
     }
 
     public static void setStates() {
+        Robot.getOperator()
+                .climbPrep_start
+                .onTrue(moveWithoutReverse(config::getClimbPrep, "Shoulder.climbPrep"));
+
+        isHandOff.onTrue(shoulderHandOff.setTrue());
+        isHandOff.onFalse(shoulderHandOff.setFalse());
+
         homeAll.whileTrue(home());
         homeAll.and(Util.autoMode).whileTrue(slowHome());
         coastMode.onTrue(log(coastMode()).ignoringDisable(true));
         coastMode.onFalse(log(ensureBrakeMode()));
 
-        Robot.getOperator().antiSecretClimb_LTRSup.whileTrue(shoulder.move(config::getNetAlgae));
+        lollipopCoral.whileTrue(
+                moveWithoutReverse(config::getLollipopCoral, "Shoulder.lollipopCoral"));
 
-        stationIntaking.whileTrue(
-                move(
-                        config::getStationIntake,
-                        // config::getStationExtendedIntake,
-                        "Shoulder.stationIntake"));
-        stationIntaking.or(groundCoral, groundAlgae).onFalse(home());
+        // stationIntaking.whileTrue(move(config::getStationIntake, "Shoulder.stationIntake"));
+        // stationIntaking.or(groundAlgae).onFalse(home());
 
-        groundCoral.whileTrue(move(config::getGroundCoralIntake, "Shoulder.groundCoral"));
-        groundAlgae.whileTrue(move(config::getGroundAlgaeIntake, "Shoulder.groundAlgae"));
+        groundAlgae.whileTrue(
+                moveWithoutReverse(config::getGroundAlgaeIntake, "Shoulder.groundAlgae"));
+        groundAlgae.onFalse(moveWithoutReverse(config::getHome, "Shoulder.groundAlgae"));
 
-        Robot.getPilot()
-                .photonRemoveL2Algae
-                .whileTrue(move(config::getL2Algae, "Shoulder.L2Algae"));
-        Robot.getPilot()
-                .photonRemoveL3Algae
-                .whileTrue(move(config::getL3Algae, "Shoulder.L3Algae"));
-        Robot.getPilot()
-                .photonRemoveL2Algae
-                .or(Robot.getPilot().photonRemoveL3Algae)
-                .onFalse(home());
+        handOff.and(ElevatorStates.isHandOff)
+                .whileTrue(moveWithoutReverse(config::getHandOff, "Shoulder.handOff"));
 
         stagedCoral
                 .and(
@@ -100,77 +102,36 @@ public class ShoulderStates {
                         Util.autoMode.not())
                 .whileTrue(move(config::getHome, "Shoulder.Stage"));
 
-        L1Coral.and(actionState.or(actionPrepState))
-                .whileTrue(move(config::getL1Coral, config::getExL1Coral, "Shoulder.L1Coral"));
-        L2Coral.and(actionPrepState, coralScoring.not())
+        L2Coral.and(actionPrepState)
+                .debounce(0.3)
                 .whileTrue(
-                        move(
-                                config::getL2Coral,
-                                config::getExL2Coral,
-                                "Shoulder.L2Coral.prescoreInitial"));
-        L2Coral.and(actionPrepState, coralScoring, ElevatorStates.isL2Coral)
-                .whileTrue(
-                        move(
-                                config::getL2Coral,
-                                config::getExL2Coral,
-                                config::getPrescoreDelay,
-                                "Shoulder.L2Coral.prescoreRepeat"));
+                        moveWithoutReverse(config::getL2Coral, "Shoulder.L2Coral.prescoreRepeat"));
         L2Coral.and(actionState)
+                .whileTrue(moveWithoutReverse(config::getL2Score, "Shoulder.L2Coral.score"));
+        L3Coral.and(actionPrepState)
+                .debounce(0.3)
                 .whileTrue(
-                        move(
-                                config::getL2Score,
-                                config::getExL2Score,
-                                config::getScoreDelay,
-                                "Shoulder.L2Coral.score"));
-        L3Coral.and(actionPrepState, coralScoring.not())
-                .whileTrue(
-                        move(
-                                config::getL3Coral,
-                                config::getExL3Coral,
-                                "Shoulder.L3Coral.prescoreInitial"));
-        L3Coral.and(actionPrepState, coralScoring, ElevatorStates.isL3Coral)
-                .whileTrue(
-                        move(
-                                config::getL3Coral,
-                                config::getExL3Coral,
-                                config::getPrescoreDelay,
-                                "Shoulder.L3Coral.prescoreRepeat"));
+                        moveWithoutReverse(config::getL3Coral, "Shoulder.L3Coral.prescoreRepeat"));
         L3Coral.and(actionState)
+                .whileTrue(moveWithoutReverse(config::getL3Score, "Shoulder.L3Coral.score"));
+        L4Coral.and(actionPrepState)
+                .debounce(0.3)
                 .whileTrue(
-                        move(
-                                config::getL3Score,
-                                config::getExL3Score,
-                                config::getScoreDelay,
-                                "Shoulder.L3Coral.score"));
-        L4Coral.and(actionPrepState, coralScoring.not())
-                .whileTrue(
-                        move(
-                                config::getL4Coral,
-                                config::getExL4Coral,
-                                "Shoulder.L4Coral.prescoreInitial"));
-        L4Coral.and(actionPrepState, coralScoring, ElevatorStates.isL4Coral)
-                .whileTrue(
-                        move(
-                                config::getL4Coral,
-                                config::getExL4Coral,
-                                config::getPrescoreDelay,
-                                "Shoulder.L4Coral.prescoreRepeat"));
+                        moveWithoutReverse(config::getL4Coral, "Shoulder.L4Coral.prescoreRepeat"));
         L4Coral.and(actionState)
+                .whileTrue(moveWithoutReverse(config::getL4CoralScore, "Shoulder.L4Coral.score"));
+
+        L4Coral.and(actionPrepState, Util.autoMode, autonL4reverse)
+                .debounce(0.3)
                 .whileTrue(
-                        move(
-                                config::getL4CoralScore,
-                                config::getExL4Score,
-                                config::getScoreDelay,
-                                "Shoulder.L4Coral.score"));
-        L4Coral.and(actionPrepState, Util.autoMode)
-                .whileTrue(slowMove(config::getExL4Coral, "Shoulder.L4Coral.slowPrescore"));
-        // L4Coral.and(actionState, Util.autoMode)
-        //         .whileTrue(
-        //                 slowMove(
-        //                         config::getL4CoralScore,
-        //                         config::getExl4Score,
-        //                         config::getScoreDelay,
-        //                         "Shoulder.L4Coral.score"));
+                        moveWithoutReverse(
+                                () -> -config.getL4Coral(), "Shoulder.L4Coral.prescoreRepeat"));
+        L4Coral.and(actionState, Util.autoMode, autonL4reverse)
+                .whileTrue(
+                        moveWithoutReverse(
+                                () -> -config.getL4CoralScore(), "Shoulder.L4Coral.score"));
+        // L4Coral.and(actionPrepState, Util.autoMode)
+        //         .whileTrue(slowMove(config::getL4Coral, "Shoulder.L4Coral.slowPrescore"));
 
         // algae
         processorAlgae
@@ -179,19 +140,22 @@ public class ShoulderStates {
         processorAlgae
                 .and(actionState)
                 .whileTrue(move(config::getHome, "Shoulder.processorAlgaeHome"));
-        L2Algae.and(actionPrepState).whileTrue(move(config::getL2Algae, "Shoulder.L2Algae"));
-        L2Algae.and(actionState).whileTrue(move(config::getHome, "Shoulder.L2AlgaeHome"));
-        L3Algae.and(actionPrepState).whileTrue(move(config::getL3Algae, "Shoulder.L3Algae"));
-        L3Algae.and(actionState).whileTrue(move(config::getHome, "Shoulder.L3AlgaeHome"));
+
+        L2Algae.and(actionPrepState)
+                .whileTrue(moveWithoutReverse(config::getL2Algae, "Shoulder.L2Algae"));
+        L2Algae.and(actionState)
+                .whileTrue(moveWithoutReverse(config::getHome, "Shoulder.L2AlgaeHome"));
+        L3Algae.and(actionPrepState)
+                .whileTrue(moveWithoutReverse(config::getL3Algae, "Shoulder.L3Algae"));
+        L3Algae.and(actionState)
+                .whileTrue(moveWithoutReverse(config::getHome, "Shoulder.L3AlgaeHome"));
+
         netAlgae.and((actionPrepState.or(actionState).not()), (Util.autoMode.not()))
                 .whileTrue(move(config::getHome, "Shoulder.netAlgaePrep"));
         netAlgae.and(actionPrepState.or(actionState))
                 .whileTrue(move(config::getNetAlgae, "Shoulder.netAlgae"));
 
         Robot.getPilot().reZero_start.onTrue(shoulder.resetToIntialPos());
-        Robot.getOperator()
-                .climbPrep_start
-                .whileTrue(move(config::getClimbPrep, "Shoulder.startClimb"));
     }
 
     public static Command runShoulder(DoubleSupplier speed) {
@@ -232,6 +196,10 @@ public class ShoulderStates {
     public static Command slowMove(
             DoubleSupplier degrees, DoubleSupplier exDegrees, DoubleSupplier delay, String name) {
         return new WaitCommand(delay.getAsDouble()).andThen(slowMove(degrees, name).withName(name));
+    }
+
+    public static Command moveWithoutReverse(DoubleSupplier degrees, String name) {
+        return shoulder.moveWithoutReverse(degrees, degrees).withName(name);
     }
 
     public static Command coastMode() {

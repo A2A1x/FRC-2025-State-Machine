@@ -16,6 +16,7 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.networktables.NTSendable;
 import edu.wpi.first.networktables.NTSendableBuilder;
@@ -69,7 +70,7 @@ public abstract class Mechanism implements NTSendable, SpectrumSubsystem {
                         TalonFXFactory.createPermanentFollowerTalon(
                                 config.followerConfigs[i].id,
                                 motor,
-                                config.followerConfigs[i].opposeLeader);
+                                config.followerConfigs[i].motorAlignment);
             }
         }
 
@@ -794,12 +795,13 @@ public abstract class Mechanism implements NTSendable, SpectrumSubsystem {
         @Getter private String name;
         @Getter private CanDeviceId id;
         @Getter private boolean attached = true;
-        @Getter private boolean opposeLeader = false;
+        @Getter private MotorAlignmentValue motorAlignment = MotorAlignmentValue.Aligned;
 
-        public FollowerConfig(String name, int id, String canbus, boolean opposeLeader) {
+        public FollowerConfig(
+                String name, int id, String canbus, MotorAlignmentValue MotorAlignment) {
             this.name = name;
             this.id = new CanDeviceId(id, canbus);
-            this.opposeLeader = opposeLeader;
+            this.motorAlignment = MotorAlignment;
         }
     }
 
@@ -824,7 +826,7 @@ public abstract class Mechanism implements NTSendable, SpectrumSubsystem {
 
         @Getter
         private DynamicMotionMagicTorqueCurrentFOC dynamicMMPositionFOC =
-                new DynamicMotionMagicTorqueCurrentFOC(0, 0, 0, 0);
+                new DynamicMotionMagicTorqueCurrentFOC(0, 0, 0);
 
         @Getter
         private MotionMagicVelocityVoltage mmVelocityVoltage = new MotionMagicVelocityVoltage(0);

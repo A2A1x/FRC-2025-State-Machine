@@ -53,6 +53,8 @@ public class Auton {
     public static final EventTrigger autonReverse = new EventTrigger("reverse");
     public static final EventTrigger autonPoseUpdate = new EventTrigger("poseUpdate");
     public static final EventTrigger autonAutoScore = new EventTrigger("autoScore");
+    public static final EventTrigger autonStow = new EventTrigger("stow");
+    public static final EventTrigger autonL4reverseTrigger = new EventTrigger("L4reverse");
 
     private final SendableChooser<Command> pathChooser = new SendableChooser<>();
     private boolean autoMessagePrinted = true;
@@ -78,7 +80,12 @@ public class Auton {
         pathChooser.addOption(
                 "Right | 3 L4 Coral", worlds3coral(true).withName("Worlds 3 Coral - Right"));
 
+        pathChooser.addOption("Left | 3 Ground Coral", groundCoral3left());
+        pathChooser.addOption("Right | 3 Ground Coral", groundCoral3right());
+
         pathChooser.addOption("Center | 3 Net Algae", worlds3algae(false));
+
+        pathChooser.addOption("Center | Offseason Back Algae", offseasonBackAlgae(false));
 
         pathChooser.addOption("Drive Forward", SpectrumAuton("Drive Forward", false));
 
@@ -105,16 +112,6 @@ public class Auton {
         printAutoDuration();
     }
 
-    public Command houston2coral(boolean mirrored) {
-        return Commands.sequence(
-                        SpectrumAuton("H2C-Start", mirrored, 2),
-                        fullSequenceAimL4Score(1.5),
-                        SpectrumAuton("H2C-Leg1", mirrored),
-                        fullSequenceAimL4Score(1.5),
-                        SpectrumAuton("H2C-Leg2", mirrored))
-                .withName("Houston 2 Coral");
-    }
-
     public Command worlds3coral(boolean mirrored) {
         return Commands.sequence(
                 SpectrumAuton("W3C-Start", mirrored),
@@ -123,8 +120,38 @@ public class Auton {
                 autoScore(),
                 SpectrumAuton("W3C-Leg2", mirrored),
                 autoScore(),
-                RobotStates.homeAll.toggleToTrue(),
-                RobotStates.autonClearStates());
+                RobotStates.autonClearStates(),
+                RobotStates.homeAll.toggleToTrue());
+    }
+
+    public Command groundCoral3left() {
+        return Commands.sequence(
+                        SpectrumAuton("GC3L-Start", false),
+                        autonScore(),
+                        SpectrumAuton("GC3L-Leg1", false),
+                        autonScore(),
+                        SpectrumAuton("GC3L-Leg2", false),
+                        autonScore(),
+                        SpectrumAuton("GC3L-Leg3", false),
+                        autonScore(),
+                        RobotStates.autonClearStates(),
+                        RobotStates.homeAll.toggleToTrue())
+                .withName("GC3L-Full");
+    }
+
+    public Command groundCoral3right() {
+        return Commands.sequence(
+                        SpectrumAuton("GC3R-Start", false),
+                        autonScore(),
+                        SpectrumAuton("GC3R-Leg1", false),
+                        autonScore(),
+                        SpectrumAuton("GC3R-Leg2", false),
+                        autonScore(),
+                        SpectrumAuton("GC3R-Leg3", false),
+                        autonScore(),
+                        RobotStates.autonClearStates(),
+                        RobotStates.homeAll.toggleToTrue())
+                .withName("GC3R-Full");
     }
 
     public Command worlds3algae(boolean mirrored) {
@@ -133,6 +160,14 @@ public class Auton {
                         autoScoreThenAlgae(),
                         SpectrumAuton("W3A-End", mirrored))
                 .withName("W3A-Full");
+    }
+
+    public Command offseasonBackAlgae(boolean mirrored) {
+        return Commands.sequence(
+                        SpectrumAuton("OBA-1", mirrored),
+                        autoScoreThenAlgae(),
+                        SpectrumAuton("OBA-2", mirrored))
+                .withName("Offseason Back Algae");
     }
 
     public Command aimScore(double alignTime) {
@@ -172,7 +207,7 @@ public class Auton {
                         RobotStates.l2.setTrue(),
                         RobotStates.algae.setTrue(),
                         Commands.waitSeconds(0.05),
-                        SwerveStates.autonAlgaeReefAimDriveVisionXY().withTimeout(.25),
+                        SwerveStates.autonAlgaeReefAimDriveVisionXY().withTimeout(.75),
                         RobotStates.actionPrepState.setTrue(),
                         Commands.waitSeconds(0.2),
                         SwerveStates.autonAlgaeDriveIntake(0.5))
@@ -187,7 +222,10 @@ public class Auton {
     }
 
     public Command autonScore() {
-        return Commands.sequence(Commands.waitSeconds(.75), RobotStates.actionPrepState.setFalse())
+        return Commands.sequence(
+                        RobotStates.actionPrepState.setFalse(),
+                        RobotStates.actionState.setTrueForTimeWithCancel(
+                                RobotStates::getAutonScoreTime, RobotStates.actionPrepState))
                 .withName("Auton.L4Score");
     }
 

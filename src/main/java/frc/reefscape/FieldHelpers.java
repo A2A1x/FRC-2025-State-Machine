@@ -421,6 +421,7 @@ public class FieldHelpers {
      * @param centerOffset
      * @return
      */
+    @SuppressWarnings("static-access")
     public static Pose2d getXYOffsetFromTag(int tagID, double distanceAway, double centerOffset) {
         Pose2d tagPose;
 
@@ -431,7 +432,8 @@ public class FieldHelpers {
 
         Rotation2d rotationOffsetParallel =
                 tagPose.getRotation().plus(new Rotation2d(offsets.getReefTagAngleOffset(tagID)));
-        Rotation2d rotationOffsetPerpendicular = tagPose.getRotation().plus(new Rotation2d(90));
+        Rotation2d rotationOffsetPerpendicular =
+                tagPose.getRotation().plus(new Rotation2d(Math.PI / 2));
 
         Translation2d offsetPose =
                 tagPose.getTranslation()
@@ -447,6 +449,14 @@ public class FieldHelpers {
 
     public static double getReefOffsetFromTagY() {
         return Robot.getVision().getReefOffsetFromTag().getY();
+    }
+
+    public static double getReefOffsetFromTagAlgaeX() {
+        return Robot.getVision().getReefOffsetFromTagAlgae().getX();
+    }
+
+    public static double getReefOffsetFromTagAlgaeY() {
+        return Robot.getVision().getReefOffsetFromTagAlgae().getY();
     }
 
     // ------------------------------------------------------------------------------
@@ -465,7 +475,7 @@ public class FieldHelpers {
         };
 
         int closestTag = Robot.getVision().getClosestTagID();
-        boolean rearTag = Robot.getVision().isRearTagClosest();
+        boolean rearTag = false;
 
         if (closestTag <= 0) {
             Pose2d currentPose = Robot.getSwerve().getRobotPose();

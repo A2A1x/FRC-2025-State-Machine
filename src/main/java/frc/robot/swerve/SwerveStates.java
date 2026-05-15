@@ -114,8 +114,8 @@ public class SwerveStates {
 
     public static Command autonAlgaeReefAimDriveVisionXY() {
         return alignDrive(
-                        () -> FieldHelpers.getReefOffsetFromTagX() + 0.05,
-                        () -> FieldHelpers.getReefOffsetFromTagY(),
+                        () -> FieldHelpers.getReefOffsetFromTagAlgaeX(),
+                        () -> FieldHelpers.getReefOffsetFromTagAlgaeY(),
                         () -> FieldHelpers.getReefTagAngle())
                 .withName("Swerve.reefAimDriveVisionXY");
     }
@@ -304,12 +304,9 @@ public class SwerveStates {
     // Uses m/s and rad/s
     private static Command drive(
             DoubleSupplier fwdPositive, DoubleSupplier leftPositive, DoubleSupplier ccwPositive) {
-        return swerve.applyRequest(
-                        () ->
-                                fieldCentricDrive
-                                        .withVelocityX(fwdPositive.getAsDouble())
-                                        .withVelocityY(leftPositive.getAsDouble())
-                                        .withRotationalRate(ccwPositive.getAsDouble()))
+        return Commands.run(
+                        () -> swerve.driveFieldRelative(fwdPositive, leftPositive, ccwPositive),
+                        swerve)
                 .withName("Swerve.drive");
     }
 

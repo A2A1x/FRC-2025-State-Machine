@@ -19,17 +19,19 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import frc.robot.auton.Auton;
-import frc.robot.climb.Climb;
-import frc.robot.climb.Climb.ClimbConfig;
-import frc.robot.configs.FM2025;
-import frc.robot.configs.PHOTON2025;
-import frc.robot.configs.PM2025;
-import frc.robot.elbow.Elbow;
-import frc.robot.elbow.Elbow.ElbowConfig;
+import frc.robot.claw.Claw;
+import frc.robot.claw.Claw.ClawConfig;
+import frc.robot.climbIntake.ClimbIntake;
+import frc.robot.climbIntake.ClimbIntake.ClimbIntakeConfig;
+import frc.robot.climbPivot.ClimbPivot;
+import frc.robot.climbPivot.ClimbPivot.ClimbPivotConfig;
+import frc.robot.configs.OM2025;
 import frc.robot.elevator.Elevator;
 import frc.robot.elevator.Elevator.ElevatorConfig;
-import frc.robot.intake.Intake;
-import frc.robot.intake.Intake.IntakeConfig;
+import frc.robot.groundIntake.GroundIntake;
+import frc.robot.groundIntake.GroundIntake.GroundIntakeConfig;
+import frc.robot.intakePivot.IntakePivot;
+import frc.robot.intakePivot.IntakePivot.IntakePivotConfig;
 import frc.robot.leds.LedFull;
 import frc.robot.leds.LedFull.LedFullConfig;
 import frc.robot.operator.Operator;
@@ -40,11 +42,8 @@ import frc.robot.shoulder.Shoulder;
 import frc.robot.shoulder.Shoulder.ShoulderConfig;
 import frc.robot.swerve.Swerve;
 import frc.robot.swerve.SwerveConfig;
-import frc.robot.twist.Twist;
-import frc.robot.twist.Twist.TwistConfig;
 import frc.robot.vision.Vision;
 import frc.robot.vision.Vision.VisionConfig;
-import frc.robot.vision.VisionSystem;
 import frc.spectrumLib.Rio;
 import frc.spectrumLib.SpectrumRobot;
 import frc.spectrumLib.Telemetry;
@@ -75,28 +74,28 @@ public class Robot extends SpectrumRobot {
         public OperatorConfig operator = new OperatorConfig();
         public ElevatorConfig elevator = new ElevatorConfig();
         public ShoulderConfig shoulder = new ShoulderConfig();
-
-        public IntakeConfig intake = new IntakeConfig();
+        public GroundIntakeConfig groundIntake = new GroundIntakeConfig();
+        public IntakePivotConfig intakePivot = new IntakePivotConfig();
         public LedFullConfig leds = new LedFullConfig();
-        public ClimbConfig climb = new ClimbConfig();
-        public ElbowConfig elbow = new ElbowConfig();
-        public TwistConfig twist = new TwistConfig();
+        public ClimbPivotConfig climbPivot = new ClimbPivotConfig();
         public VisionConfig vision = new VisionConfig();
+        public ClawConfig claw = new ClawConfig();
+        public ClimbIntakeConfig climbIntake = new ClimbIntakeConfig();
     }
 
     @Getter private static Swerve swerve;
     @Getter private static Elevator elevator;
-    @Getter private static Intake intake;
+    @Getter private static GroundIntake groundIntake;
+    @Getter private static IntakePivot intakePivot;
     @Getter private static LedFull leds;
     @Getter private static Operator operator;
     @Getter private static Pilot pilot;
-    @Getter private static VisionSystem visionSystem;
     @Getter private static Vision vision;
     @Getter private static Auton auton;
-    @Getter private static Climb climb;
-    @Getter private static Elbow elbow;
+    @Getter private static ClimbPivot climbPivot;
     @Getter private static Shoulder shoulder;
-    @Getter private static Twist twist;
+    @Getter private static Claw claw;
+    @Getter private static ClimbIntake climbIntake;
     public static boolean commandInit = false;
 
     public Robot() {
@@ -109,17 +108,8 @@ public class Robot extends SpectrumRobot {
 
             /** Set up the config */
             switch (Rio.id) {
-                case PHOTON_2025:
-                    config = new PHOTON2025();
-                    break;
-                case PM_2025:
-                    config = new PM2025();
-                    break;
-                case FM_2025:
-                    config = new FM2025();
-                    break;
                 default: // SIM and UNKNOWN
-                    config = new FM2025();
+                    config = new OM2025();
                     break;
             }
 
@@ -137,18 +127,20 @@ public class Robot extends SpectrumRobot {
             Timer.delay(canInitDelay);
             elevator = new Elevator(config.elevator);
             Timer.delay(canInitDelay);
-            climb = new Climb(config.climb);
+            climbPivot = new ClimbPivot(config.climbPivot);
+            Timer.delay(canInitDelay);
+            climbIntake = new ClimbIntake(config.climbIntake);
             Timer.delay(canInitDelay);
             shoulder = new Shoulder(config.shoulder);
             Timer.delay(canInitDelay);
-            elbow = new Elbow(config.elbow);
+            claw = new Claw(config.claw);
             Timer.delay(canInitDelay);
-            intake = new Intake(config.intake);
+            intakePivot = new IntakePivot(config.intakePivot);
+            Timer.delay(canInitDelay);
+            groundIntake = new GroundIntake(config.groundIntake);
             Timer.delay(canInitDelay);
             vision = new Vision(config.vision);
-            visionSystem = new VisionSystem(swerve::getRobotPose);
             Timer.delay(canInitDelay);
-            twist = new Twist(config.twist);
             auton = new Auton();
 
             // Setup Default Commands for all subsystems
@@ -335,6 +327,7 @@ public class Robot extends SpectrumRobot {
             field2d.getObject("path").setPoses(new ArrayList<>()); // clears auto visualizer
 
             Telemetry.print("!!! Teleop Init Complete !!! ");
+            // climbPivot.startClimb();
         } catch (Throwable t) {
             // intercept error and log it
             CrashTracker.logThrowableCrash(t);
