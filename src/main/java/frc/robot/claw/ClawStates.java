@@ -8,7 +8,6 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Robot;
 import frc.robot.claw.Claw.ClawConfig;
 import frc.spectrumLib.Telemetry;
-import java.util.function.DoubleSupplier;
 
 public class ClawStates {
     private static Claw claw = Robot.getClaw();
@@ -86,11 +85,6 @@ public class ClawStates {
 
     private static Command ensureBrakeMode() {
         return claw.ensureBrakeMode();
-    }
-
-    private static Command runVoltageCurrentLimits(
-            DoubleSupplier voltage, DoubleSupplier supplyCurrent, DoubleSupplier torqueCurrent) {
-        return claw.runVoltageCurrentLimits(voltage, supplyCurrent, torqueCurrent);
     }
 
     // Log Command

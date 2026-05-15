@@ -8,7 +8,6 @@ import frc.robot.Robot;
 import frc.robot.groundIntake.GroundIntake.GroundIntakeConfig;
 import frc.robot.shoulder.ShoulderStates;
 import frc.spectrumLib.Telemetry;
-import java.util.function.DoubleSupplier;
 
 public class GroundIntakeStates {
     private static GroundIntake groundIntake = Robot.getGroundIntake();
@@ -62,11 +61,6 @@ public class GroundIntakeStates {
 
     private static Command ensureBrakeMode() {
         return groundIntake.ensureBrakeMode();
-    }
-
-    private static Command runVoltageCurrentLimits(
-            DoubleSupplier voltage, DoubleSupplier supplyCurrent, DoubleSupplier torqueCurrent) {
-        return groundIntake.runVoltageCurrentLimits(voltage, supplyCurrent, torqueCurrent);
     }
 
     // Log Command

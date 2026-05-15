@@ -8,9 +8,11 @@ import com.pathplanner.lib.path.PathPlannerPath;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.net.WebServer;
+import edu.wpi.first.units.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Filesystem;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -153,6 +155,21 @@ public class Robot extends SpectrumRobot {
             CrashTracker.logThrowableCrash(t);
             throw t;
         }
+
+        RobotController.setBrownoutVoltage(Units.Volts.of(4.6));
+
+        Telemetry.log("BuildConstants/ProjectName", BuildConstants.MAVEN_NAME);
+        Telemetry.log("BuildConstants/BuildDate", BuildConstants.BUILD_DATE);
+        Telemetry.log("BuildConstants/GitSHA", BuildConstants.GIT_SHA);
+        Telemetry.log("BuildConstants/GitDate", BuildConstants.GIT_DATE);
+        Telemetry.log("BuildConstants/GitBranch", BuildConstants.GIT_BRANCH);
+        Telemetry.log(
+                "BuildConstants/GitDirty",
+                switch (BuildConstants.DIRTY) {
+                    case 0 -> "All changes committed";
+                    case 1 -> "Uncommitted changes";
+                    default -> "Unknown";
+                });
     }
 
     /**
@@ -242,15 +259,30 @@ public class Robot extends SpectrumRobot {
         Telemetry.print("### Disabled Init Complete ### ");
     }
 
+    String autoName = "";
+
     @Override
     public void disabledPeriodic() {
-        String autoName = "";
         String newAutoName;
+        boolean leftStart = true;
         List<PathPlannerPath> pathPlannerPaths = new ArrayList<>();
-        newAutoName = (auton.getAutonomousCommand()).getName();
+        newAutoName = auton.getAutonomousCommand().getName();
+        leftStart = !newAutoName.endsWith(" - Right");
+
+        if (newAutoName.equals("Do Nothing")) {
+            field2d.getObject("Auto Routine").setPoses(new ArrayList<>());
+            autoName = newAutoName;
+            return;
+        }
+
+        // Remove " - Left" or " - Right" suffix if present
+        if (newAutoName.endsWith(" - Left") || newAutoName.endsWith(" - Right")) {
+            newAutoName = newAutoName.substring(0, newAutoName.lastIndexOf(" - "));
+        }
 
         if (!autoName.equals(newAutoName)) {
             autoName = newAutoName;
+            Telemetry.log("Auton Warmed Up", false);
 
             if (AutoBuilder.getAllAutoNames().contains(autoName)) {
                 try {
@@ -268,6 +300,32 @@ public class Robot extends SpectrumRobot {
                                     .collect(Collectors.toList());
                 }
 
+                // Mirror the paths if starting on the right
+                if (!leftStart) {
+                    pathPlannerPaths =
+                            pathPlannerPaths.stream()
+                                    .map(PathPlannerPath::mirrorPath)
+                                    .collect(Collectors.toList());
+                }
+
+                // Set the robot pose to the starting pose of the first path
+                swerve.resetPose(
+                        pathPlannerPaths.get(0).getStartingHolonomicPose().orElse(new Pose2d()));
+
+                // Warm up the starting path
+                Command warmUpPath =
+                        Commands.sequence(
+                                        AutoBuilder.followPath(pathPlannerPaths.get(0))
+                                                .withTimeout(0.5),
+                                        Commands.runOnce(
+                                                () -> {
+                                                    Telemetry.print(
+                                                            "Auton Warmed Up", PrintPriority.HIGH);
+                                                    Telemetry.log("Auton Warmed Up", true);
+                                                }))
+                                .ignoringDisable(true);
+                CommandScheduler.getInstance().schedule(warmUpPath);
+
                 // Convert path points to poses
                 List<Pose2d> poses = new ArrayList<>();
                 for (PathPlannerPath path : pathPlannerPaths) {
@@ -278,10 +336,12 @@ public class Robot extends SpectrumRobot {
                                                     new Pose2d(
                                                             point.position.getX(),
                                                             point.position.getY(),
-                                                            new Rotation2d()))
+                                                            Rotation2d.kZero))
                                     .collect(Collectors.toList()));
                 }
-                field2d.getObject("path").setPoses(poses);
+                field2d.getObject("Auto Routine").setPoses(poses);
+            } else {
+                field2d.getObject("Auto Routine").setPoses(new ArrayList<>());
             }
         }
     }

@@ -6,7 +6,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Robot;
 import frc.robot.climbIntake.ClimbIntake.ClimbIntakeConfig;
 import frc.spectrumLib.Telemetry;
-import java.util.function.DoubleSupplier;
 
 public class ClimbIntakeStates {
     private static ClimbIntake climbIntake = Robot.getClimbIntake();
@@ -38,11 +37,6 @@ public class ClimbIntakeStates {
 
     private static Command ensureBrakeMode() {
         return climbIntake.ensureBrakeMode();
-    }
-
-    private static Command runVoltageCurrentLimits(
-            DoubleSupplier voltage, DoubleSupplier supplyCurrent, DoubleSupplier torqueCurrent) {
-        return climbIntake.runVoltageCurrentLimits(voltage, supplyCurrent, torqueCurrent);
     }
 
     // Log Command

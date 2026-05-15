@@ -154,10 +154,6 @@ public class ElevatorStates {
         return move(config::getHome, "Elevator.home");
     }
 
-    private static Command slowHome() {
-        return slowMove(config::getHome, "Elevator.slowHome");
-    }
-
     private static Command coastMode() {
         return elevator.coastMode().withName("Elevator.CoastMode");
     }

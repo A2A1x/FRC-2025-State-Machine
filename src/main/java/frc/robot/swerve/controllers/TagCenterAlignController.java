@@ -1,9 +1,11 @@
-package frc.robot.swerve;
+package frc.robot.swerve.controllers;
 
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Robot;
+import frc.robot.swerve.Swerve;
+import frc.robot.swerve.SwerveConfig;
 
 /**
  * Uses a profiled PID Controller to quickly turn the robot to a specified angle. Once the robot is

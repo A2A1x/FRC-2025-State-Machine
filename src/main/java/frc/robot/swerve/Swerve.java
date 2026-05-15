@@ -38,6 +38,10 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.reefscape.Field;
 import frc.reefscape.FieldHelpers;
 import frc.robot.Robot;
+import frc.robot.swerve.controllers.TagCenterAlignController;
+import frc.robot.swerve.controllers.TagDistanceAlignController;
+import frc.robot.swerve.controllers.TranslationXController;
+import frc.robot.swerve.controllers.TranslationYController;
 import frc.spectrumLib.SpectrumSubsystem;
 import frc.spectrumLib.Telemetry;
 import frc.spectrumLib.util.Util;
@@ -54,7 +58,6 @@ public class Swerve extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder>
     @Getter private SwerveConfig config;
     private Notifier simNotifier = null;
     private double lastSimTime;
-    private RotationController rotationController;
     private TagCenterAlignController tagCenterAlignController;
     private TagDistanceAlignController tagDistanceAlignController;
     private TranslationXController xController;
@@ -94,7 +97,6 @@ public class Swerve extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder>
         this.config = config;
         configurePathPlanner();
 
-        rotationController = new RotationController(config);
         tagCenterAlignController = new TagCenterAlignController(config);
         tagDistanceAlignController = new TagDistanceAlignController(config);
         xController = new TranslationXController(config);
@@ -379,14 +381,6 @@ public class Swerve extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder>
     // --------------------------------------------------------------------------------
     // Rotation Controller
     // --------------------------------------------------------------------------------
-    double getRotationControl(double goalRadians) {
-        return rotationController.calculate(goalRadians, getRotationRadians());
-    }
-
-    void resetRotationController() {
-        rotationController.reset(
-                getRotationRadians(), getCurrentRobotChassisSpeeds().omegaRadiansPerSecond);
-    }
 
     Rotation2d getRotation() {
         return getRobotPose().getRotation();
@@ -394,10 +388,6 @@ public class Swerve extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder>
 
     double getRotationRadians() {
         return getRobotPose().getRotation().getRadians();
-    }
-
-    double calculateRotationController(DoubleSupplier targetRadians) {
-        return rotationController.calculate(targetRadians.getAsDouble(), getRotationRadians());
     }
 
     // --------------------------------------------------------------------------------
