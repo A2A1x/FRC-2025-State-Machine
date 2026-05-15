@@ -188,7 +188,7 @@ public class Robot extends SpectrumRobot {
         // Bind Triggers for all subsystems
         setupStates();
         RobotStates.setupStates();
-        RobotStates.clearStates().schedule();
+        CommandScheduler.getInstance().schedule(RobotStates.clearStates());
     }
 
     public void clearCommandsAndButtons() {
@@ -198,7 +198,7 @@ public class Robot extends SpectrumRobot {
         // Bind Triggers for all subsystems
         setupStates();
         RobotStates.setupStates();
-        RobotStates.clearStates().schedule();
+        CommandScheduler.getInstance().schedule(RobotStates.clearStates());
     }
 
     public void setupSmartDashboardData() {

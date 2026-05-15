@@ -36,7 +36,6 @@ public class ClimbIntake extends Mechanism {
         @Getter private double wheelDiameter = 5.0;
 
         public ClimbIntakeConfig() {
-            // TODO: change id
             super("ClimbIntake", 15, Rio.CANIVORE);
             configPIDGains(0, velocityKp, 0, 0);
             configFeedForwardGains(velocityKs, velocityKv, 0, 0);

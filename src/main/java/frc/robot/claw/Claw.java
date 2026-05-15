@@ -21,8 +21,6 @@ public class Claw extends Mechanism {
 
     public static class ClawConfig extends Config {
 
-        // TODO: tune these values
-
         @Getter private double hasGamePieceVelocity = 50;
         @Getter private double hasGamePieceCurrent = 80;
         @Getter private double hasAlgaeCurrent = 80;
@@ -64,7 +62,6 @@ public class Claw extends Mechanism {
         @Getter private double wheelDiameter = 5.0;
 
         public ClawConfig() {
-            // TODO: change id
             super("Claw", 5, Rio.CANIVORE);
             configPIDGains(0, velocityKp, 0, 0);
             configFeedForwardGains(velocityKs, velocityKv, 0, 0);

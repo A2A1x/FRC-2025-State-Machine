@@ -53,7 +53,6 @@ public class GroundIntake extends Mechanism {
         @Getter private double wheelDiameter = 5.0;
 
         public GroundIntakeConfig() {
-            // TODO: change id
             super("Intake", 25, Rio.CANIVORE);
             configPIDGains(0, velocityKp, 0, 0);
             configFeedForwardGains(velocityKs, velocityKv, 0, 0);

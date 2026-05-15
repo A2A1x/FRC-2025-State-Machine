@@ -16,6 +16,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.PrintCommand;
 import frc.robot.RobotStates;
@@ -68,13 +69,6 @@ public class Auton {
 
         pathChooser.setDefaultOption("Do Nothing", Commands.print("Do Nothing Auto ran"));
 
-        // pathChooser.addOption("1 Meter", SpectrumAuton("1 Meter", false));
-        // pathChooser.addOption("3 Meter", SpectrumAuton("3 Meter", false));
-        // pathChooser.addOption("5 Meter", SpectrumAuton("5 Meter", false));
-
-        // pathChooser.addOption("Left | 2 L4 Coral", houston2coral(false));
-        // pathChooser.addOption("Right | 2 L4 Coral", houston2coral(true));
-
         pathChooser.addOption(
                 "Left | 3 L4 Coral", worlds3coral(false).withName("Worlds 3 Coral - Left"));
         pathChooser.addOption(
@@ -101,7 +95,7 @@ public class Auton {
         Command autonCommand = getAutonomousCommand();
 
         if (autonCommand != null) {
-            autonCommand.schedule();
+            CommandScheduler.getInstance().schedule(autonCommand);
             startAutonTimer();
         } else {
             Telemetry.print("No Auton Command Found");

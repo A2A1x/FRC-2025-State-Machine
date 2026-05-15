@@ -20,8 +20,6 @@ public class IntakePivot extends Mechanism {
 
     public static class IntakePivotConfig extends Config {
 
-        // TODO: tune these values
-
         @Getter @Setter private double home = 0;
         @Getter @Setter private double groundCoralIntake = 80;
         @Getter @Setter private double handOff = -30;
