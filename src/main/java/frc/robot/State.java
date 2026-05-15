@@ -51,7 +51,6 @@ public enum State {
                     Map.entry(CORAL_L4_RELEASE, IDLE_CORAL),
                     Map.entry(ALGAE_NET_RELEASE, IDLE_ALGAE));
 
-
     private static boolean isSpecialModeState(State state) {
         return switch (state) {
             case CLIMING_APPROACH, CLIMBING_HANG, CLIMBING_LOCK -> true;
@@ -116,7 +115,6 @@ public enum State {
         State nextState = this; // Default to the current state
 
         return switch (currentState) {
-
             case CORAL_L2_PREP, CORAL_L3_PREP, CORAL_L4_PREP -> {
                 nextState = currentState.getNextScoreState();
                 yield nextState;
