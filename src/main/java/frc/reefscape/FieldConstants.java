@@ -31,6 +31,8 @@ public class FieldConstants {
     public static final double fieldLength =
             AprilTagLayoutType.OFFICIAL.getLayout().getFieldLength();
     public static final double fieldWidth = AprilTagLayoutType.OFFICIAL.getLayout().getFieldWidth();
+    public static final Pose2d fieldCenter =
+            new Pose2d(fieldLength / 2.0, fieldWidth / 2.0, Rotation2d.kZero);
     public static final double startingLineX =
             Units.inchesToMeters(299.438); // Measured from the inside of starting line
     public static final double algaeDiameter = Units.inchesToMeters(16);

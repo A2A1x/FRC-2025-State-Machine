@@ -1,6 +1,7 @@
 package frc.robot.subsystems;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
@@ -94,8 +95,8 @@ public class Superstructure extends SubsystemBase {
         CLIMBING_LOCK;
     }
 
-    private WantedSuperState wantedSuperState = WantedSuperState.STOPPED;
-    private CurrentSuperState currentSuperState = CurrentSuperState.STOPPED;
+    private WantedSuperState wantedSuperState = WantedSuperState.DEFAULT_STATE;
+    private CurrentSuperState currentSuperState = CurrentSuperState.DEFAULT_STATE;
 
     public Superstructure(Swerve swerveSubsystem, Elevator elevatorSubsystem) {
         this.swerveSubsystem = swerveSubsystem;
@@ -142,6 +143,12 @@ public class Superstructure extends SubsystemBase {
             case CORAL_L4_RIGHT_SCORE:
                 currentSuperState = CurrentSuperState.CORAL_L4_RIGHT_SCORE;
                 break;
+            case CORAL_L3_LEFT_SCORE:
+                currentSuperState = CurrentSuperState.CORAL_L3_LEFT_SCORE;
+                break;
+            case CORAL_L3_RIGHT_SCORE:
+                currentSuperState = CurrentSuperState.CORAL_L3_RIGHT_SCORE;
+                break;
         }
         return currentSuperState;
     }
@@ -166,6 +173,12 @@ public class Superstructure extends SubsystemBase {
             case CORAL_L4_RIGHT_SCORE:
                 scoreL4Coral(Constants.SuperstructureConstants.ScoringSide.RIGHT);
                 break;
+            case CORAL_L3_LEFT_SCORE:
+                scoreL3Coral(Constants.SuperstructureConstants.ScoringSide.LEFT);
+                break;
+            case CORAL_L3_RIGHT_SCORE:
+                scoreL3Coral(Constants.SuperstructureConstants.ScoringSide.RIGHT);
+                break;
             default:
         }
     }
@@ -179,23 +192,28 @@ public class Superstructure extends SubsystemBase {
     private void noPiece() {
         swerveSubsystem.setWantedState(Swerve.WantedState.TELEOP_DRIVE);
         swerveSubsystem.setTeleopVelocityCoefficient(REGULAR_TELEOP_TRANSLATION_COEFFICIENT);
-        elevatorSubsystem.setWantedState(Elevator.WantedState.STOWED_CORAL);
+        // clawSubsystem.setWantedState(Claw.WantedState.IDLE);
+        // shoulderSubsystem.setWantedState(Shoulder.WantedState.HOME);
+        elevatorSubsystem.setWantedState(Elevator.WantedState.HOME);
     }
 
     private void holdingCoral() {
         swerveSubsystem.setWantedState(Swerve.WantedState.TELEOP_DRIVE);
         swerveSubsystem.setTeleopVelocityCoefficient(REGULAR_TELEOP_TRANSLATION_COEFFICIENT);
+        // clawSubsystem.setWantedState(Claw.WantedState.GRIP_CORAL);
+        // shoulderSubsystem.setWantedState(Shoulder.WantedState.STOWED_CORAL);
         elevatorSubsystem.setWantedState(Elevator.WantedState.STOWED_CORAL);
     }
 
     private void holdingAlgae() {
         swerveSubsystem.setWantedState(Swerve.WantedState.TELEOP_DRIVE);
         swerveSubsystem.setTeleopVelocityCoefficient(REGULAR_TELEOP_TRANSLATION_COEFFICIENT);
+        // clawSubsystem.setWantedState(Claw.WantedState.GRIP_ALGAE);
+        // shoulderSubsystem.setWantedState(Shoulder.WantedState.STOWED_ALGAE);
         elevatorSubsystem.setWantedState(Elevator.WantedState.STOWED_ALGAE);
     }
 
     private void scoreL4Coral(Constants.SuperstructureConstants.ScoringSide scoringSide) {
-        boolean isReadyToScore = false;
 
         // clawSubsystem.setWantedState(Claw.WantedState.GRIP_CORAL);
         // shoulderSubsystem.setWantedState(Shoulder.WantedState.L4_SCORE_LINEUP);
@@ -203,7 +221,7 @@ public class Superstructure extends SubsystemBase {
 
         driveToCoralScoringPose(scoringSide);
 
-        if (isReadyToScore) {
+        if (isReadyToEject()) {
             // clawSubsystem.setWantedState(Claw.WantedState.RELEASE);
             // shoulderSubsystem.setWantedState(Shoulder.WantedState.L4_SCORE_RELEASE);
             elevatorSubsystem.setWantedState(Elevator.WantedState.L4_SCORE_RELEASE);
@@ -212,6 +230,36 @@ public class Superstructure extends SubsystemBase {
             //         setWantedSuperState(WantedSuperState.DEFAULT_STATE);
             //   }
         }
+    }
+
+    private void scoreL3Coral(Constants.SuperstructureConstants.ScoringSide scoringSide) {
+
+        // clawSubsystem.setWantedState(Claw.WantedState.GRIP_CORAL);
+        // shoulderSubsystem.setWantedState(Shoulder.WantedState.L3_SCORE_LINEUP);
+        elevatorSubsystem.setWantedState(Elevator.WantedState.L3_SCORE_LINEUP);
+
+        driveToCoralScoringPose(scoringSide);
+
+        if (isReadyToEject()) {
+            // clawSubsystem.setWantedState(Claw.WantedState.RELEASE);
+            // shoulderSubsystem.setWantedState(Shoulder.WantedState.L3_SCORE_RELEASE);
+            elevatorSubsystem.setWantedState(Elevator.WantedState.L3_SCORE_RELEASE);
+
+            //   if (!hasCoral()) {
+            //         setWantedSuperState(WantedSuperState.DEFAULT_STATE);
+            //   }
+        }
+    }
+
+    private boolean isReadyToEject() {
+        // return elevatorSubsystem.isAtSetpoint()
+        //         && shoulderSubsystem.isAtSetpoint()
+        //         && clawSubsystem.isAtSetpoint();
+        //         swerveSubsystem.isAtDriveToPointSetpoint()
+        // && swerveSubsystem.isAtDesiredRotation(Units.degreesToRadians(2.0))
+        return swerveSubsystem.isAtDriveToPointSetpoint()
+                && swerveSubsystem.isAtDesiredRotation(Units.degreesToRadians(2.0))
+                && elevatorSubsystem.isAtSetpoint();
     }
 
     private void driveToCoralScoringPose(

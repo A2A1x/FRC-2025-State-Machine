@@ -3,8 +3,8 @@ package frc.spectrumLib.vision;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.subsystems.vision.Vision.VisionConfig;
+import frc.spectrumLib.Telemetry;
 import frc.spectrumLib.vision.LimelightHelpers.LimelightResults;
 import frc.spectrumLib.vision.LimelightHelpers.PoseEstimate;
 import frc.spectrumLib.vision.LimelightHelpers.RawFiducial;
@@ -461,15 +461,17 @@ public class Limelight {
             return;
         }
         Pose3d botPose3d = getMegaTag1_Pose3d();
-        SmartDashboard.putString("LimelightX", df.format(botPose3d.getTranslation().getX()));
-        SmartDashboard.putString("LimelightY", df.format(botPose3d.getTranslation().getY()));
-        SmartDashboard.putString("LimelightZ", df.format(botPose3d.getTranslation().getZ()));
-        SmartDashboard.putString(
-                "LimelightRoll", df.format(Units.radiansToDegrees(botPose3d.getRotation().getX())));
-        SmartDashboard.putString(
-                "LimelightPitch",
+        Telemetry.log("VisionDebug/LimelightX", df.format(botPose3d.getTranslation().getX()));
+        Telemetry.log("VisionDebug/LimelightY", df.format(botPose3d.getTranslation().getY()));
+        Telemetry.log("VisionDebug/LimelightZ", df.format(botPose3d.getTranslation().getZ()));
+        Telemetry.log(
+                "VisionDebug/LimelightRoll",
+                df.format(Units.radiansToDegrees(botPose3d.getRotation().getX())));
+        Telemetry.log(
+                "VisionDebug/LimelightPitch",
                 df.format(Units.radiansToDegrees(botPose3d.getRotation().getY())));
-        SmartDashboard.putString(
-                "LimelightYaw", df.format(Units.radiansToDegrees(botPose3d.getRotation().getZ())));
+        Telemetry.log(
+                "VisionDebug/LimelightYaw",
+                df.format(Units.radiansToDegrees(botPose3d.getRotation().getZ())));
     }
 }

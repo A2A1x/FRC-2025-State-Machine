@@ -46,7 +46,7 @@ public class Pilot extends Gamepad {
 
             setRightStickDeadzone(deadzone);
             setRightStickExp(3.0);
-            setRightStickScalar(3 * Math.PI);
+            setRightStickScalar(6 * Math.PI);
 
             setTriggersDeadzone(deadzone);
             setTriggersExp(1);
@@ -78,21 +78,18 @@ public class Pilot extends Gamepad {
     }
 
     // Positive is forward, up on the left stick is positive
-    // Applies Exponential Curve, Deadzone, and Slow Mode toggle
     public double getDriveFwdPositive() {
         double fwdPositive = leftStickCurve.calculate(-1 * getLeftY());
         return fwdPositive;
     }
 
     // Positive is left, left on the left stick is positive
-    // Applies Exponential Curve, Deadzone, and Slow Mode toggle
     public double getDriveLeftPositive() {
         double leftPositive = -1 * leftStickCurve.calculate(getLeftX());
         return leftPositive;
     }
 
     // Positive is counter-clockwise, left Trigger is positive
-    // Applies Exponential Curve, Deadzone, and Slow Mode toggle
     public double getDriveCCWPositive() {
         double ccwPositive = rightStickCurve.calculate(getRightX());
         ccwPositive *= Math.abs(config.getDefaultTurnScalor());

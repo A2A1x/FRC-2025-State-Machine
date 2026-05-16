@@ -185,7 +185,7 @@ public class Robot extends TimedRobot {
              */
             CommandScheduler.getInstance().run();
 
-            SmartDashboard.putNumber("MatchTime", DriverStation.getMatchTime());
+            Telemetry.log("MatchTime", DriverStation.getMatchTime());
             field2d.setRobotPose(swerveSubsystem.getRobotPose());
         } catch (Throwable t) {
             // intercept error and log it
@@ -203,8 +203,7 @@ public class Robot extends TimedRobot {
                     Commands.sequence(
                                     FollowPathCommand.warmupCommand(),
                                     PathfindingCommand.warmupCommand(),
-                                    new InstantCommand(
-                                            () -> SmartDashboard.putBoolean("Initialized?", true)))
+                                    new InstantCommand(() -> Telemetry.log("Initialized?", true)))
                             .ignoringDisable(true);
             CommandScheduler.getInstance().schedule(autonStartCommand);
             autonWarmedUp = true;

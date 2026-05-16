@@ -171,7 +171,7 @@ public abstract class Mechanism implements Subsystem {
         return new Trigger(() -> isAtTargetPosition(tolerance));
     }
 
-    private boolean isAtTargetPosition(DoubleSupplier tolerance) {
+    public boolean isAtTargetPosition(DoubleSupplier tolerance) {
         return Math.abs(cachedRotations.getAsDouble() - target) < tolerance.getAsDouble();
     }
 

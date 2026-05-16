@@ -290,7 +290,7 @@ public class Elevator extends Mechanism {
                 break;
         }
         final double finalWantedPosition = wantedPosition;
-        setMMPosition(() -> finalWantedPosition);
+        setMMPositionFoc(() -> finalWantedPosition);
     }
 
     private void logTelemetry() {
@@ -323,6 +323,10 @@ public class Elevator extends Mechanism {
 
     public Command resetToInitialPos() {
         return run(this::setInitialPosition);
+    }
+
+    public boolean isAtSetpoint() {
+        return isAtTargetPosition(config::getTriggerTolerance);
     }
 
     public DoubleSupplier getPositionMeters =

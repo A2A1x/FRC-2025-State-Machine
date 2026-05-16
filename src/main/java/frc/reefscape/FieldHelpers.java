@@ -5,8 +5,8 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Robot;
+import frc.spectrumLib.Telemetry;
 
 public class FieldHelpers {
 
@@ -207,7 +207,7 @@ public class FieldHelpers {
             tag = blueToRedTagID(tag);
         }
 
-        SmartDashboard.putNumber("Target ID getReefZone: ", tag);
+        Telemetry.log("RobotZone/ZoneTagID", tag);
         return tag;
     }
 

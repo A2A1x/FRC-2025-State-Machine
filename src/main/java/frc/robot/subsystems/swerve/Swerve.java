@@ -21,7 +21,6 @@ import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.system.plant.DCMotor;
@@ -29,6 +28,7 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Notifier;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -123,7 +123,6 @@ public class Swerve extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> impleme
                 MapleSimSwerveDrivetrain.regulateModuleConstantsForSimulation(config.getModules()));
 
         this.config = config;
-        configurePathPlanner();
 
         // Configure heading PID on the shared driveAtAngle request
         DRIVE_AT_ANGLE_REQUEST.HeadingController =
@@ -144,6 +143,8 @@ public class Swerve extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> impleme
             startSimThread();
         }
 
+        configurePathPlanner();
+
         this.register();
         registerTelemetry(this::log);
         Telemetry.print(getName() + " Subsystem Initialized: ");
@@ -160,6 +161,10 @@ public class Swerve extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> impleme
 
         Telemetry.log("Swerve/SystemState", systemState.toString());
         Telemetry.log("Swerve/WantedState", wantedState.toString());
+
+        if (Utils.isSimulation()) {
+            Telemetry.log("Swerve/SimPose", getRobotPose());
+        }
     }
 
     private SystemState handleStateTransition() {
@@ -228,7 +233,6 @@ public class Swerve extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> impleme
         double xMagnitude = Robot.getPilot().getDriveFwdPositive();
         double yMagnitude = Robot.getPilot().getDriveLeftPositive();
         double angularMagnitude = Robot.getPilot().getDriveCCWPositive();
-        angularMagnitude = Math.copySign(angularMagnitude * angularMagnitude, angularMagnitude);
 
         double xVelocity =
                 (DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue)
@@ -312,19 +316,28 @@ public class Swerve extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> impleme
     // ------------------------------------------------------------------------
     // Pose / field helpers
     // ------------------------------------------------------------------------
+
+    /**
+     * The function `getRobotPose` returns the robot's pose after checking and updating it.
+     *
+     * @return The `getRobotPose` method is returning the robot's current pose after calling the
+     *     `seedCheckedPose` method with the current pose as an argument.
+     */
     public Pose2d getRobotPose() {
-        return keepPoseOnField(getState().Pose);
+        // Simulates collision by with field obstacles and boundaries
+        if (this.mapleSimSwerveDrivetrain != null) {
+            return mapleSimSwerveDrivetrain.mapleSimDrive.getSimulatedDriveTrainPose();
+        }
+        return getState().Pose;
     }
 
-    private Pose2d keepPoseOnField(Pose2d pose) {
-        double halfRobot = config.getRobotLength() / 2;
-        double newX = Util.limit(pose.getX(), halfRobot, FieldConstants.fieldLength - halfRobot);
-        double newY = Util.limit(pose.getY(), halfRobot, FieldConstants.fieldWidth - halfRobot);
-        if (pose.getX() != newX || pose.getY() != newY) {
-            pose = new Pose2d(new Translation2d(newX, newY), pose.getRotation());
-            resetPose(pose);
+    @Override
+    public void resetPose(Pose2d pose) {
+        if (this.mapleSimSwerveDrivetrain != null) {
+            mapleSimSwerveDrivetrain.mapleSimDrive.setSimulationWorldPose(pose);
+            Timer.delay(0.05); // Wait for simulation to update
         }
-        return pose;
+        super.resetPose(pose);
     }
 
     public Trigger inXzone(double minXmeter, double maxXmeter) {
@@ -453,11 +466,7 @@ public class Swerve extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> impleme
     // PathPlanner configuration
     // ------------------------------------------------------------------------
     private void configurePathPlanner() {
-        resetPose(
-                new Pose2d(
-                        Units.feetToMeters(27.0),
-                        Units.feetToMeters(27.0 / 2.0),
-                        config.getBlueAlliancePerspectiveRotation()));
+        resetPose(FieldConstants.fieldCenter);
 
         RobotConfig robotConfig = null;
         try {

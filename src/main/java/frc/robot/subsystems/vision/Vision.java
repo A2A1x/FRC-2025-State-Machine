@@ -10,11 +10,7 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
-import edu.wpi.first.networktables.NTSendable;
-import edu.wpi.first.networktables.NTSendableBuilder;
-import edu.wpi.first.util.sendable.SendableRegistry;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.reefscape.FieldConstants;
@@ -31,7 +27,7 @@ import java.util.Arrays;
 import lombok.Getter;
 import lombok.Setter;
 
-public class Vision implements NTSendable, Subsystem {
+public class Vision implements Subsystem {
 
     public static class VisionConfig {
         @Getter final String name = "Vision";
@@ -128,9 +124,6 @@ public class Vision implements NTSendable, Subsystem {
     // Setup the telemetry values, has to be called at the end of the implemented mechanism
     // constructor
     public void telemetryInit() {
-        SendableRegistry.add(this, getName());
-        SmartDashboard.putData(this);
-
         Robot.getField2d().getObject(frontLL.getCameraName());
         Robot.getField2d().getObject(backLL.getCameraName());
     }
@@ -159,21 +152,6 @@ public class Vision implements NTSendable, Subsystem {
             return pose;
         }
         return new Pose2d();
-    }
-
-    /*-------------------
-    initSendable
-    Use # to denote items that are settable
-    ------------*/
-
-    @Override
-    public void initSendable(NTSendableBuilder builder) {
-        builder.addDoubleProperty("FrontTX", frontLL::getTagTx, null);
-        builder.addDoubleProperty("FrontTA", frontLL::getTagTA, null);
-        builder.addDoubleProperty("FrontTagID", frontLL::getClosestTagID, null);
-        builder.addDoubleProperty("BackTX", backLL::getTagTx, null);
-        builder.addDoubleProperty("BackTA", backLL::getTagTA, null);
-        builder.addDoubleProperty("BackTagID", backLL::getClosestTagID, null);
     }
 
     private void setLimeLightOrientation() {
