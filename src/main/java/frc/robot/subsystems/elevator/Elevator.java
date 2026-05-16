@@ -91,29 +91,28 @@ public class Elevator extends Mechanism {
         HOME,
         STOPPED,
 
-        ALGAE_INTAKE_GROUND,
+        ALGAE_GROUND_INTAKE,
         ALGAE_INTAKE_L2,
         ALGAE_INTAKE_L3,
-
         ALGAE_NET,
-        PROCESSOR,
+        ALGAE_PROCESSOR,
 
         STOWED_CORAL,
         STOWED_ALGAE,
         PRE_CORAL_HANDOFF,
         HANDOFF,
 
-        L1_SCORE_LINEUP,
-        L1_SCORE_RELEASE,
+        CORAL_L1_LINEUP,
+        CORAL_L1_RELEASE,
 
-        L2_SCORE_LINEUP,
-        L2_SCORE_RELEASE,
+        CORAL_L2_LINEUP,
+        CORAL_L2_RELEASE,
 
-        L3_SCORE_LINEUP,
-        L3_SCORE_RELEASE,
+        CORAL_L3_LINEUP,
+        CORAL_L3_RELEASE,
 
-        L4_SCORE_LINEUP,
-        L4_SCORE_RELEASE,
+        CORAL_L4_LINEUP,
+        CORAL_L4_RELEASE,
 
         CLIMBING;
     }
@@ -122,29 +121,28 @@ public class Elevator extends Mechanism {
         HOME,
         STOPPED,
 
-        ALGAE_INTAKE_GROUND,
+        ALGAE_GROUND_INTAKE,
         ALGAE_INTAKE_L2,
         ALGAE_INTAKE_L3,
-
         ALGAE_NET,
-        PROCESSOR,
+        ALGAE_PROCESSOR,
 
         STOWED_CORAL,
         STOWED_ALGAE,
         PRE_CORAL_HANDOFF,
         HANDOFF,
 
-        L1_SCORE_LINEUP,
-        L1_SCORE_RELEASE,
+        CORAL_L1_LINEUP,
+        CORAL_L1_RELEASE,
 
-        L2_SCORE_LINEUP,
-        L2_SCORE_RELEASE,
+        CORAL_L2_LINEUP,
+        CORAL_L2_RELEASE,
 
-        L3_SCORE_LINEUP,
-        L3_SCORE_RELEASE,
+        CORAL_L3_LINEUP,
+        CORAL_L3_RELEASE,
 
-        L4_SCORE_LINEUP,
-        L4_SCORE_RELEASE,
+        CORAL_L4_LINEUP,
+        CORAL_L4_RELEASE,
 
         CLIMBING;
     }
@@ -182,16 +180,16 @@ public class Elevator extends Mechanism {
                 return SystemState.HOME;
             case STOPPED:
                 return SystemState.STOPPED;
-            case ALGAE_INTAKE_GROUND:
-                return SystemState.ALGAE_INTAKE_GROUND;
+            case ALGAE_GROUND_INTAKE:
+                return SystemState.ALGAE_GROUND_INTAKE;
             case ALGAE_INTAKE_L2:
                 return SystemState.ALGAE_INTAKE_L2;
             case ALGAE_INTAKE_L3:
                 return SystemState.ALGAE_INTAKE_L3;
             case ALGAE_NET:
                 return SystemState.ALGAE_NET;
-            case PROCESSOR:
-                return SystemState.PROCESSOR;
+            case ALGAE_PROCESSOR:
+                return SystemState.ALGAE_PROCESSOR;
             case STOWED_CORAL:
                 return SystemState.STOWED_CORAL;
             case STOWED_ALGAE:
@@ -200,22 +198,22 @@ public class Elevator extends Mechanism {
                 return SystemState.PRE_CORAL_HANDOFF;
             case HANDOFF:
                 return SystemState.HANDOFF;
-            case L1_SCORE_LINEUP:
-                return SystemState.L1_SCORE_LINEUP;
-            case L1_SCORE_RELEASE:
-                return SystemState.L1_SCORE_RELEASE;
-            case L2_SCORE_LINEUP:
-                return SystemState.L2_SCORE_LINEUP;
-            case L2_SCORE_RELEASE:
-                return SystemState.L2_SCORE_RELEASE;
-            case L3_SCORE_LINEUP:
-                return SystemState.L3_SCORE_LINEUP;
-            case L3_SCORE_RELEASE:
-                return SystemState.L3_SCORE_RELEASE;
-            case L4_SCORE_LINEUP:
-                return SystemState.L4_SCORE_LINEUP;
-            case L4_SCORE_RELEASE:
-                return SystemState.L4_SCORE_RELEASE;
+            case CORAL_L1_LINEUP:
+                return SystemState.CORAL_L1_LINEUP;
+            case CORAL_L1_RELEASE:
+                return SystemState.CORAL_L1_RELEASE;
+            case CORAL_L2_LINEUP:
+                return SystemState.CORAL_L2_LINEUP;
+            case CORAL_L2_RELEASE:
+                return SystemState.CORAL_L2_RELEASE;
+            case CORAL_L3_LINEUP:
+                return SystemState.CORAL_L3_LINEUP;
+            case CORAL_L3_RELEASE:
+                return SystemState.CORAL_L3_RELEASE;
+            case CORAL_L4_LINEUP:
+                return SystemState.CORAL_L4_LINEUP;
+            case CORAL_L4_RELEASE:
+                return SystemState.CORAL_L4_RELEASE;
             case CLIMBING:
                 return SystemState.CLIMBING;
             default:
@@ -230,9 +228,9 @@ public class Elevator extends Mechanism {
                 wantedPosition = 0.5;
                 break;
             case STOPPED:
-                wantedPosition = getPositionRotations();
+                stop();
                 break;
-            case ALGAE_INTAKE_GROUND:
+            case ALGAE_GROUND_INTAKE:
                 wantedPosition = 10.5;
                 break;
             case ALGAE_INTAKE_L2:
@@ -244,7 +242,7 @@ public class Elevator extends Mechanism {
             case ALGAE_NET:
                 wantedPosition = 33.966;
                 break;
-            case PROCESSOR:
+            case ALGAE_PROCESSOR:
                 wantedPosition = 0.0;
                 break;
             case STOWED_CORAL:
@@ -259,28 +257,28 @@ public class Elevator extends Mechanism {
             case HANDOFF:
                 wantedPosition = 27.4;
                 break;
-            case L1_SCORE_LINEUP:
+            case CORAL_L1_LINEUP:
                 wantedPosition = 1.5;
                 break;
-            case L1_SCORE_RELEASE:
+            case CORAL_L1_RELEASE:
                 wantedPosition = 0.5;
                 break;
-            case L2_SCORE_LINEUP:
+            case CORAL_L2_LINEUP:
                 wantedPosition = 7.3;
                 break;
-            case L2_SCORE_RELEASE:
+            case CORAL_L2_RELEASE:
                 wantedPosition = 7.3;
                 break;
-            case L3_SCORE_LINEUP:
+            case CORAL_L3_LINEUP:
                 wantedPosition = 17.2;
                 break;
-            case L3_SCORE_RELEASE:
+            case CORAL_L3_RELEASE:
                 wantedPosition = 17.2;
                 break;
-            case L4_SCORE_LINEUP:
+            case CORAL_L4_LINEUP:
                 wantedPosition = 33.0;
                 break;
-            case L4_SCORE_RELEASE:
+            case CORAL_L4_RELEASE:
                 wantedPosition = 33.0;
                 break;
             case CLIMBING:
