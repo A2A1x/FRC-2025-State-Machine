@@ -12,7 +12,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
+import frc.robot.constants.Constants;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
@@ -222,6 +224,65 @@ public class FieldConstants {
         var tagPose =
                 AprilTagLayoutType.OFFICIAL.getLayout().getTagPose(tagId).orElse(Pose3d.kZero);
         return tagPose;
+    }
+
+    public static Pose2d getDesiredFinalScoringPoseForCoral(
+            int tagID,
+            Constants.SuperstructureConstants.ScoringSide scoringSide,
+            Constants.SuperstructureConstants.ScoringDirection scoringDirection) {
+        return getDesiredPointToDriveToForCoralScoring(tagID, scoringSide, scoringDirection, 0.0);
+    }
+
+    public static Pose2d getDesiredPointToDriveToForCoralScoring(
+            int tagID,
+            Constants.SuperstructureConstants.ScoringSide scoringSide,
+            Constants.SuperstructureConstants.ScoringDirection scoringDirection,
+            double distanceFromFinalScoringPose) {
+
+        if (tagID >= 1 && tagID <= 22) {
+            Pose2d tagPose = getTagPose(tagID).toPose2d();
+            double xOffset =
+                    Units.inchesToMeters(
+                            Constants.SuperstructureConstants.X_OFFSET_FROM_TAG_FOR_SCORING_INCHES
+                                    + Units.metersToInches(distanceFromFinalScoringPose));
+
+            double yOffset =
+                    -Units.inchesToMeters(
+                            Constants.SuperstructureConstants
+                                    .Y_OFFSET_FROM_TAG_FOR_SCORING_ON_REEF_INCHES);
+            if (scoringSide == Constants.SuperstructureConstants.ScoringSide.RIGHT) {
+                yOffset *= -1;
+            }
+            Translation2d offsetFromTag = new Translation2d(xOffset, yOffset);
+
+            var transformedPose =
+                    tagPose.plus(
+                            new Transform2d(
+                                    offsetFromTag.getX(), offsetFromTag.getY(), Rotation2d.kZero));
+
+            if (scoringDirection == Constants.SuperstructureConstants.ScoringDirection.FRONT) {
+                transformedPose =
+                        new Pose2d(
+                                transformedPose.getTranslation(),
+                                transformedPose.getRotation().plus(Rotation2d.k180deg));
+            }
+
+            return transformedPose;
+        } else {
+            return Pose2d.kZero;
+        }
+    }
+
+    /** Returns {@code true} if the robot is on the blue alliance. */
+    public static boolean isBlue() {
+        return DriverStation.getAlliance()
+                .orElse(DriverStation.Alliance.Blue)
+                .equals(DriverStation.Alliance.Blue);
+    }
+
+    /** Returns {@code true} if the robot is on the red alliance. */
+    public static boolean isRed() {
+        return !isBlue();
     }
 
     public static final double aprilTagWidth = Units.inchesToMeters(6.50);

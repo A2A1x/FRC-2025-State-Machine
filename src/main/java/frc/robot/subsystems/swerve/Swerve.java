@@ -27,6 +27,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.reefscape.FieldConstants;
+import frc.reefscape.FieldHelpers;
 import frc.robot.Robot;
 import frc.spectrumLib.Telemetry;
 import frc.spectrumLib.util.Util;
@@ -217,17 +218,21 @@ public class Swerve extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> impleme
         double xVelocity =
                 (DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue)
                                         == DriverStation.Alliance.Blue
-                                ? -xMagnitude * config.getSpeedAt12Volts().baseUnitMagnitude()
-                                : xMagnitude * config.getSpeedAt12Volts().baseUnitMagnitude())
+                                ? xMagnitude
+                                : -xMagnitude)
                         * teleopVelocityCoefficient;
         double yVelocity =
                 (DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue)
                                         == DriverStation.Alliance.Blue
-                                ? -yMagnitude * config.getSpeedAt12Volts().baseUnitMagnitude()
-                                : yMagnitude * config.getSpeedAt12Volts().baseUnitMagnitude())
+                                ? yMagnitude
+                                : -yMagnitude)
                         * teleopVelocityCoefficient;
         double angularVelocity =
-                angularMagnitude * config.getMaxAngularVelocity() * rotationVelocityCoefficient;
+                (DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue)
+                                        == DriverStation.Alliance.Blue
+                                ? -angularMagnitude
+                                : angularMagnitude)
+                        * rotationVelocityCoefficient;
 
         Rotation2d skewCompensationFactor =
                 Rotation2d.fromRadians(
@@ -320,6 +325,40 @@ public class Swerve extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> impleme
     public Trigger inYzone(double minYmeter, double maxYmeter) {
         return new Trigger(
                 () -> Util.inRange(() -> getRobotPose().getY(), () -> minYmeter, () -> maxYmeter));
+    }
+
+    /**
+     * This method is used to check if the robot is in the X zone of the field flips the values if
+     * Red Alliance
+     *
+     * @param minXmeter
+     * @param maxXmeter
+     * @return
+     */
+    public Trigger inXzoneAlliance(double minXmeter, double maxXmeter) {
+        return new Trigger(
+                () ->
+                        Util.inRange(
+                                FieldHelpers.flipXifRed(getRobotPose().getX()),
+                                minXmeter,
+                                maxXmeter));
+    }
+
+    /**
+     * This method is used to check if the robot is in the Y zone of the field flips the values if
+     * Red Alliance
+     *
+     * @param minYmeter
+     * @param maxYmeter
+     * @return
+     */
+    public Trigger inYzoneAlliance(double minYmeter, double maxYmeter) {
+        return new Trigger(
+                () ->
+                        Util.inRange(
+                                FieldHelpers.flipYifRed(getRobotPose().getY()),
+                                minYmeter,
+                                maxYmeter));
     }
 
     public ChassisSpeeds getCurrentRobotChassisSpeeds() {

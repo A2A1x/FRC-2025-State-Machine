@@ -1,9 +1,13 @@
 package frc.robot.subsystems;
 
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.reefscape.FieldConstants;
+import frc.reefscape.FieldHelpers;
+import frc.robot.constants.Constants;
 import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.swerve.Swerve;
 import frc.spectrumLib.Telemetry;
@@ -74,29 +78,16 @@ public class Superstructure extends SubsystemBase {
         CORAL_RELEASE_HANDOFF,
 
         CORAL_L1_PREP,
-        CORAL_L1_RELEASE,
-        CORAL_L1_BACKAWAY,
+        CORAL_L1_SCORE,
 
-        CORAL_L2_LEFT_PREP,
-        CORAL_L2_LEFT_RELEASE,
-        CORAL_L2_LEFT_BACKAWAY,
-        CORAL_L2_RIGHT_PREP,
-        CORAL_L2_RIGHT_RELEASE,
-        CORAL_L2_RIGHT_BACKAWAY,
+        CORAL_L2_LEFT_SCORE,
+        CORAL_L2_RIGHT_SCORE,
 
-        CORAL_L3_LEFT_PREP,
-        CORAL_L3_LEFT_RELEASE,
-        CORAL_L3_LEFT_BACKAWAY,
-        CORAL_L3_RIGHT_PREP,
-        CORAL_L3_RIGHT_RELEASE,
-        CORAL_L3_RIGHT_BACKAWAY,
+        CORAL_L3_LEFT_SCORE,
+        CORAL_L3_RIGHT_SCORE,
 
-        CORAL_L4_LEFT_PREP,
-        CORAL_L4_LEFT_RELEASE,
-        CORAL_L4_LEFT_BACKAWAY,
-        CORAL_L4_RIGHT_PREP,
-        CORAL_L4_RIGHT_RELEASE,
-        CORAL_L4_RIGHT_BACKAWAY,
+        CORAL_L4_LEFT_SCORE,
+        CORAL_L4_RIGHT_SCORE,
 
         CLIMING_APPROACH,
         CLIMBING_HANG,
@@ -112,8 +103,8 @@ public class Superstructure extends SubsystemBase {
     }
 
     public void periodic() {
-        Telemetry.log("Superstructure/WantedSuperState", wantedSuperState);
-        Telemetry.log("Superstructure/CurrentSuperState", currentSuperState);
+        Telemetry.log("Superstructure/WantedSuperState", wantedSuperState.toString());
+        Telemetry.log("Superstructure/CurrentSuperState", currentSuperState.toString());
 
         currentSuperState = handStateTransitions();
         applyStates();
@@ -145,6 +136,12 @@ public class Superstructure extends SubsystemBase {
             case IDLE_CORAL:
                 currentSuperState = CurrentSuperState.IDLE_CORAL;
                 break;
+            case CORAL_L4_LEFT_SCORE:
+                currentSuperState = CurrentSuperState.CORAL_L4_LEFT_SCORE;
+                break;
+            case CORAL_L4_RIGHT_SCORE:
+                currentSuperState = CurrentSuperState.CORAL_L4_RIGHT_SCORE;
+                break;
         }
         return currentSuperState;
     }
@@ -163,18 +160,26 @@ public class Superstructure extends SubsystemBase {
             case IDLE_ALGAE:
                 holdingAlgae();
                 break;
+            case CORAL_L4_LEFT_SCORE:
+                scoreL4Coral(Constants.SuperstructureConstants.ScoringSide.LEFT);
+                break;
+            case CORAL_L4_RIGHT_SCORE:
+                scoreL4Coral(Constants.SuperstructureConstants.ScoringSide.RIGHT);
+                break;
             default:
         }
     }
 
     private void stopped() {
+        swerveSubsystem.setWantedState(Swerve.WantedState.TELEOP_DRIVE);
+        swerveSubsystem.setTeleopVelocityCoefficient(REGULAR_TELEOP_TRANSLATION_COEFFICIENT);
         elevatorSubsystem.setWantedState(Elevator.WantedState.STOPPED);
     }
 
     private void noPiece() {
         swerveSubsystem.setWantedState(Swerve.WantedState.TELEOP_DRIVE);
         swerveSubsystem.setTeleopVelocityCoefficient(REGULAR_TELEOP_TRANSLATION_COEFFICIENT);
-        elevatorSubsystem.setWantedState(Elevator.WantedState.STOPPED);
+        elevatorSubsystem.setWantedState(Elevator.WantedState.STOWED_CORAL);
     }
 
     private void holdingCoral() {
@@ -188,6 +193,40 @@ public class Superstructure extends SubsystemBase {
         swerveSubsystem.setTeleopVelocityCoefficient(REGULAR_TELEOP_TRANSLATION_COEFFICIENT);
         elevatorSubsystem.setWantedState(Elevator.WantedState.STOWED_ALGAE);
     }
+
+    private void scoreL4Coral(Constants.SuperstructureConstants.ScoringSide scoringSide) {
+        boolean isReadyToScore = false;
+
+        // clawSubsystem.setWantedState(Claw.WantedState.GRIP_CORAL);
+        // shoulderSubsystem.setWantedState(Shoulder.WantedState.L4_SCORE_LINEUP);
+        elevatorSubsystem.setWantedState(Elevator.WantedState.L4_SCORE_LINEUP);
+
+        driveToCoralScoringPose(scoringSide);
+
+        if (isReadyToScore) {
+            // clawSubsystem.setWantedState(Claw.WantedState.RELEASE);
+            // shoulderSubsystem.setWantedState(Shoulder.WantedState.L4_SCORE_RELEASE);
+            elevatorSubsystem.setWantedState(Elevator.WantedState.L4_SCORE_RELEASE);
+
+            //   if (!hasCoral()) {
+            //         setWantedSuperState(WantedSuperState.DEFAULT_STATE);
+            //   }
+        }
+    }
+
+    private void driveToCoralScoringPose(
+            Constants.SuperstructureConstants.ScoringSide scoringSide) {
+        Pose2d desiredPoseToDriveTo =
+                FieldConstants.getDesiredFinalScoringPoseForCoral(
+                        FieldHelpers.getReefZoneTagID(swerveSubsystem.getRobotPose()),
+                        scoringSide,
+                        Constants.SuperstructureConstants.ScoringDirection.FRONT);
+        swerveSubsystem.setDesiredPoseForDriveToPoint(desiredPoseToDriveTo);
+    }
+
+    // private boolean hasCoral() {
+    //     return clawSubsystem.hasCoral();
+    // }
 
     public void setWantedSuperState(WantedSuperState superState) {
         this.wantedSuperState = superState;
@@ -209,6 +248,6 @@ public class Superstructure extends SubsystemBase {
                         () -> true),
                 setStateCommand(noPieceCondition),
                 // hasGamePiece();
-                () -> false);
+                () -> true);
     }
 }

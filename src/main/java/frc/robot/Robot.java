@@ -137,18 +137,24 @@ public class Robot extends TimedRobot {
     }
 
     public void configureBindings() {
-        pilot.LB.onTrue(
-                superstructure.configureButtonBinding(
-                        Superstructure.WantedSuperState.CORAL_L4_LEFT_SCORE,
-                        Superstructure.WantedSuperState.ALGAE_NET_READY,
-                        Superstructure.WantedSuperState.ALGAE_INTAKE_FLOOR))
-                .onFalse(superstructure.setStateCommand(Superstructure.WantedSuperState.DEFAULT_STATE));
-        pilot.RB.onTrue(
-                superstructure.configureButtonBinding(
-                        Superstructure.WantedSuperState.CORAL_L4_RIGHT_SCORE,
-                        Superstructure.WantedSuperState.ALGAE_NET_READY,
-                        Superstructure.WantedSuperState.CORAL_INTAKE_FLOOR))
-                .onFalse(superstructure.setStateCommand(Superstructure.WantedSuperState.DEFAULT_STATE));
+        pilot.LB
+                .onTrue(
+                        superstructure.configureButtonBinding(
+                                Superstructure.WantedSuperState.CORAL_L4_LEFT_SCORE,
+                                Superstructure.WantedSuperState.ALGAE_NET_READY,
+                                Superstructure.WantedSuperState.ALGAE_INTAKE_FLOOR))
+                .onFalse(
+                        superstructure.setStateCommand(
+                                Superstructure.WantedSuperState.DEFAULT_STATE));
+        pilot.RB
+                .onTrue(
+                        superstructure.configureButtonBinding(
+                                Superstructure.WantedSuperState.CORAL_L4_RIGHT_SCORE,
+                                Superstructure.WantedSuperState.ALGAE_NET_READY,
+                                Superstructure.WantedSuperState.CORAL_INTAKE_FLOOR))
+                .onFalse(
+                        superstructure.setStateCommand(
+                                Superstructure.WantedSuperState.DEFAULT_STATE));
     }
 
     public void setupSmartDashboardData() {
