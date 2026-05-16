@@ -9,9 +9,9 @@ import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.RunCommand;
+import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-import frc.spectrumLib.SpectrumSubsystem;
 import frc.spectrumLib.Telemetry;
 import frc.spectrumLib.util.ExpCurve;
 import frc.spectrumLib.util.Util;
@@ -20,7 +20,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 // Gamepad class
-public abstract class Gamepad implements SpectrumSubsystem {
+public abstract class Gamepad implements Subsystem {
     private Alert disconnectedAlert;
 
     public static final Trigger kFalse = new Trigger(() -> false);

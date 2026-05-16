@@ -69,6 +69,7 @@ public class Vision implements NTSendable, Subsystem {
 
     /** Limelights */
     @Getter public final Limelight frontLL;
+
     @Getter public final Limelight backLL;
 
     public final Limelight[] allLimelights;
@@ -176,7 +177,7 @@ public class Vision implements NTSendable, Subsystem {
     }
 
     private void setLimeLightOrientation() {
-        double yaw = Robot.getSwerve().getRobotPose().getRotation().getDegrees();
+        double yaw = Robot.getSwerveSubsystem().getRobotPose().getRotation().getDegrees();
 
         frontLL.setRobotOrientation(yaw);
     }
@@ -244,11 +245,11 @@ public class Vision implements NTSendable, Subsystem {
             Pose2d megaTag1Pose2d = megaTag1Pose3d.toPose2d();
             RawFiducial[] tags = ll.getRawFiducial();
             double highestAmbiguity = 2;
-            ChassisSpeeds robotSpeed = Robot.getSwerve().getCurrentRobotChassisSpeeds();
+            ChassisSpeeds robotSpeed = Robot.getSwerveSubsystem().getCurrentRobotChassisSpeeds();
 
             // distance from current pose to vision estimated MT2 pose
             double mt1PoseDifference =
-                    Robot.getSwerve()
+                    Robot.getSwerveSubsystem()
                             .getRobotPose()
                             .getTranslation()
                             .getDistance(megaTag1Pose2d.getTranslation());
@@ -333,7 +334,7 @@ public class Vision implements NTSendable, Subsystem {
 
             Pose2d integratedPose =
                     new Pose2d(megaTag1Pose2d.getTranslation(), megaTag1Pose2d.getRotation());
-            Robot.getSwerve()
+            Robot.getSwerveSubsystem()
                     .addVisionMeasurement(
                             integratedPose,
                             Utils.fpgaToCurrentTime(ll.getMegaTag1PoseTimestamp()),
@@ -357,11 +358,11 @@ public class Vision implements NTSendable, Subsystem {
             Pose2d megaTag1Pose2d = megaTag1Pose3d.toPose2d();
             RawFiducial[] tags = ll.getRawFiducial();
             double highestAmbiguity = 2;
-            ChassisSpeeds robotSpeed = Robot.getSwerve().getCurrentRobotChassisSpeeds();
+            ChassisSpeeds robotSpeed = Robot.getSwerveSubsystem().getCurrentRobotChassisSpeeds();
 
             // distance from current pose to vision estimated MT2 pose
             double mt1PoseDifference =
-                    Robot.getSwerve()
+                    Robot.getSwerveSubsystem()
                             .getRobotPose()
                             .getTranslation()
                             .getDistance(megaTag1Pose2d.getTranslation());
@@ -445,7 +446,7 @@ public class Vision implements NTSendable, Subsystem {
 
             Pose2d integratedPose =
                     new Pose2d(megaTag1Pose2d.getTranslation(), megaTag1Pose2d.getRotation());
-            Robot.getSwerve()
+            Robot.getSwerveSubsystem()
                     .addVisionMeasurement(
                             integratedPose,
                             Utils.fpgaToCurrentTime(ll.getMegaTag1PoseTimestamp()),
@@ -467,11 +468,11 @@ public class Vision implements NTSendable, Subsystem {
             double targetSize = ll.getTargetSize();
             Pose2d megaTag2Pose2d = ll.getMegaTag2_Pose2d();
             double highestAmbiguity = 2;
-            ChassisSpeeds robotSpeed = Robot.getSwerve().getCurrentRobotChassisSpeeds();
+            ChassisSpeeds robotSpeed = Robot.getSwerveSubsystem().getCurrentRobotChassisSpeeds();
 
             // distance from current pose to vision estimated MT2 pose
             double mt2PoseDifference =
-                    Robot.getSwerve()
+                    Robot.getSwerveSubsystem()
                             .getRobotPose()
                             .getTranslation()
                             .getDistance(megaTag2Pose2d.getTranslation());
@@ -511,7 +512,7 @@ public class Vision implements NTSendable, Subsystem {
 
             Pose2d integratedPose =
                     new Pose2d(megaTag2Pose2d.getTranslation(), megaTag2Pose2d.getRotation());
-            Robot.getSwerve()
+            Robot.getSwerveSubsystem()
                     .addVisionMeasurement(
                             integratedPose,
                             Utils.fpgaToCurrentTime(ll.getMegaTag2PoseTimestamp()),
@@ -533,11 +534,11 @@ public class Vision implements NTSendable, Subsystem {
             double targetSize = ll.getTargetSize();
             Pose2d megaTag2Pose2d = ll.getMegaTag2_Pose2d();
             double highestAmbiguity = 2;
-            ChassisSpeeds robotSpeed = Robot.getSwerve().getCurrentRobotChassisSpeeds();
+            ChassisSpeeds robotSpeed = Robot.getSwerveSubsystem().getCurrentRobotChassisSpeeds();
 
             // distance from current pose to vision estimated MT2 pose
             double mt2PoseDifference =
-                    Robot.getSwerve()
+                    Robot.getSwerveSubsystem()
                             .getRobotPose()
                             .getTranslation()
                             .getDistance(megaTag2Pose2d.getTranslation());
@@ -578,7 +579,7 @@ public class Vision implements NTSendable, Subsystem {
 
             Pose2d integratedPose =
                     new Pose2d(megaTag2Pose2d.getTranslation(), megaTag2Pose2d.getRotation());
-            Robot.getSwerve()
+            Robot.getSwerveSubsystem()
                     .addVisionMeasurement(
                             integratedPose,
                             Utils.fpgaToCurrentTime(ll.getMegaTag2PoseTimestamp()),
@@ -595,7 +596,10 @@ public class Vision implements NTSendable, Subsystem {
             return true;
         }
 
-        if (Math.abs(Robot.getSwerve().getCurrentRobotChassisSpeeds().omegaRadiansPerSecond)
+        if (Math.abs(
+                        Robot.getSwerveSubsystem()
+                                .getCurrentRobotChassisSpeeds()
+                                .omegaRadiansPerSecond)
                 >= 1.6) {
             return true;
         }
@@ -675,12 +679,12 @@ public class Vision implements NTSendable, Subsystem {
             };
             Telemetry.log("Current Vision Pose: ", visionPose);
 
-            Robot.getSwerve()
+            Robot.getSwerveSubsystem()
                     .setVisionMeasurementStdDevs(VecBuilder.fill(0.00001, 0.00001, 0.00001));
 
             Pose2d integratedPose = new Pose2d(megaPose.getTranslation(), botpose.getRotation());
-            Robot.getSwerve().addVisionMeasurement(integratedPose, poseTimestamp);
-            pose = Robot.getSwerve().getRobotPose();
+            Robot.getSwerveSubsystem().addVisionMeasurement(integratedPose, poseTimestamp);
+            pose = Robot.getSwerveSubsystem().getRobotPose();
             // Gets updated pose of x, y, and theta values
             visionPose = new double[] {pose.getX(), pose.getY(), pose.getRotation().getDegrees()};
             Telemetry.log("Vision Pose Reset To: ", visionPose);

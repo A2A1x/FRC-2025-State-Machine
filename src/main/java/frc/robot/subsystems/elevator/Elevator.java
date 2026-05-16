@@ -3,11 +3,9 @@ package frc.robot.subsystems.elevator;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.sim.TalonFXSimState;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.networktables.NTSendableBuilder;
 import edu.wpi.first.wpilibj.smartdashboard.Mechanism2d;
 import edu.wpi.first.wpilibj.util.Color8Bit;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import frc.robot.RobotSim;
 import frc.spectrumLib.Rio;
 import frc.spectrumLib.Telemetry;
@@ -20,37 +18,10 @@ import lombok.*;
 public class Elevator extends Mechanism {
 
     public static class ElevatorConfig extends Config {
-        @Getter @Setter private boolean isPhoton = false;
 
         /* Elevator constants in rotations */
         @Getter @Setter private double maxRotations = 34;
-
         @Getter @Setter private double minRotations = 0.1;
-
-        /* Elevator positions in rotations */
-        @Getter @Setter private double fullExtend = maxRotations * .999;
-        @Getter @Setter private double home = 0.5;
-
-        @Getter @Setter private double clawGroundAlgaeIntake = 10.5;
-        @Getter @Setter private double clawGroundCoralIntake = 0;
-
-        @Getter @Setter private double stationIntake = 0;
-        @Getter @Setter private double stationExtendedIntake = 0;
-
-        @Getter @Setter private double processorAlgae = 0;
-        @Getter @Setter private double l2Algae = 14.4;
-        @Getter @Setter private double l3Algae = 24.9;
-        @Getter @Setter private double netAlgae = fullExtend;
-
-        @Getter @Setter private double l2Coral = 7.3;
-        @Getter @Setter private double l2Score = 7.3;
-        @Getter @Setter private double l3Coral = 17.2;
-        @Getter @Setter private double l3Score = 17.2;
-        @Getter @Setter private double l4Coral = 33;
-        @Getter @Setter private double l4Score = 33;
-
-        @Getter @Setter private double handOff = 27.4;
-        @Getter @Setter private double handOffAvoid = 31;
 
         @Getter private double triggerTolerance = 1.15;
         @Getter private double elevatorIsUpHeight = 5;
@@ -115,6 +86,74 @@ public class Elevator extends Mechanism {
         }
     }
 
+    // ------------------------------------------------------------------------
+    // State machine
+    // ------------------------------------------------------------------------
+    public enum WantedState {
+        HOME,
+        STOPPED,
+
+        ALGAE_INTAKE_GROUND,
+        ALGAE_INTAKE_L2,
+        ALGAE_INTAKE_L3,
+
+        ALGAE_NET,
+        PROCESSOR,
+
+        STOWED_CORAL,
+        STOWED_ALGAE,
+        PRE_CORAL_HANDOFF,
+        HANDOFF,
+
+        L1_SCORE_LINEUP,
+        L1_SCORE_RELEASE,
+
+        L2_SCORE_LINEUP,
+        L2_SCORE_RELEASE,
+
+        L3_SCORE_LINEUP,
+        L3_SCORE_RELEASE,
+
+        L4_SCORE_LINEUP,
+        L4_SCORE_RELEASE,
+
+        CLIMBING;
+    }
+
+    public enum SystemState {
+        HOME,
+        STOPPED,
+
+        ALGAE_INTAKE_GROUND,
+        ALGAE_INTAKE_L2,
+        ALGAE_INTAKE_L3,
+
+        ALGAE_NET,
+        PROCESSOR,
+
+        STOWED_CORAL,
+        STOWED_ALGAE,
+        PRE_CORAL_HANDOFF,
+        HANDOFF,
+
+        L1_SCORE_LINEUP,
+        L1_SCORE_RELEASE,
+
+        L2_SCORE_LINEUP,
+        L2_SCORE_RELEASE,
+
+        L3_SCORE_LINEUP,
+        L3_SCORE_RELEASE,
+
+        L4_SCORE_LINEUP,
+        L4_SCORE_RELEASE,
+
+        CLIMBING;
+    }
+
+    private WantedState wantedState = WantedState.STOPPED;
+    private SystemState systemState = SystemState.STOPPED;
+
     @Getter private ElevatorConfig config;
     @Getter private ElevatorSim sim;
 
@@ -125,34 +164,159 @@ public class Elevator extends Mechanism {
         setInitialPosition();
 
         simulationInit();
-        telemetryInit();
         Telemetry.print(getName() + " Subsystem Initialized");
     }
 
+    // ------------------------------------------------------------------------
+    // Periodic / state machine
+    // ------------------------------------------------------------------------
     @Override
-    public void periodic() {}
+    public void periodic() {
+        logTelemetry();
 
-    public void setupStates() {
+        systemState = handleStateTransition();
+        applyStates();
     }
 
-    public void setupDefaultCommand() {
-    }
-
-    /*-------------------
-    initSendable
-    Use # to denote items that are settable
-    ------------*/
-    @Override
-    public void initSendable(NTSendableBuilder builder) {
-        if (isAttached()) {
-            builder.addStringProperty("CurrentCommand", this::getCurrentCommandName, null);
-            builder.addDoubleProperty("Rotations", this::getPositionRotations, null);
-            // builder.addDoubleProperty("Velocity", this::getVelocityRPM, null);
-            builder.addDoubleProperty("StatorCurrent", this::getStatorCurrent, null);
-            builder.addDoubleProperty("MotorVoltage", this::getVoltage, null);
+    private SystemState handleStateTransition() {
+        switch (wantedState) {
+            case HOME:
+                return SystemState.HOME;
+            case STOPPED:
+                return SystemState.STOPPED;
+            case ALGAE_INTAKE_GROUND:
+                return SystemState.ALGAE_INTAKE_GROUND;
+            case ALGAE_INTAKE_L2:
+                return SystemState.ALGAE_INTAKE_L2;
+            case ALGAE_INTAKE_L3:
+                return SystemState.ALGAE_INTAKE_L3;
+            case ALGAE_NET:
+                return SystemState.ALGAE_NET;
+            case PROCESSOR:
+                return SystemState.PROCESSOR;
+            case STOWED_CORAL:
+                return SystemState.STOWED_CORAL;
+            case STOWED_ALGAE:
+                return SystemState.STOWED_ALGAE;
+            case PRE_CORAL_HANDOFF:
+                return SystemState.PRE_CORAL_HANDOFF;
+            case HANDOFF:
+                return SystemState.HANDOFF;
+            case L1_SCORE_LINEUP:
+                return SystemState.L1_SCORE_LINEUP;
+            case L1_SCORE_RELEASE:
+                return SystemState.L1_SCORE_RELEASE;
+            case L2_SCORE_LINEUP:
+                return SystemState.L2_SCORE_LINEUP;
+            case L2_SCORE_RELEASE:
+                return SystemState.L2_SCORE_RELEASE;
+            case L3_SCORE_LINEUP:
+                return SystemState.L3_SCORE_LINEUP;
+            case L3_SCORE_RELEASE:
+                return SystemState.L3_SCORE_RELEASE;
+            case L4_SCORE_LINEUP:
+                return SystemState.L4_SCORE_LINEUP;
+            case L4_SCORE_RELEASE:
+                return SystemState.L4_SCORE_RELEASE;
+            case CLIMBING:
+                return SystemState.CLIMBING;
+            default:
+                return systemState;
         }
     }
 
+    private void applyStates() {
+        double wantedPosition = 0.0;
+        switch (systemState) {
+            case HOME:
+                wantedPosition = 0.5;
+                break;
+            case STOPPED:
+                wantedPosition = getPositionRotations();
+                break;
+            case ALGAE_INTAKE_GROUND:
+                wantedPosition = 10.5;
+                break;
+            case ALGAE_INTAKE_L2:
+                wantedPosition = 14.4;
+                break;
+            case ALGAE_INTAKE_L3:
+                wantedPosition = 24.9;
+                break;
+            case ALGAE_NET:
+                wantedPosition = 33.966;
+                break;
+            case PROCESSOR:
+                wantedPosition = 0.0;
+                break;
+            case STOWED_CORAL:
+                wantedPosition = 0.5;
+                break;
+            case STOWED_ALGAE:
+                wantedPosition = 0.5;
+                break;
+            case PRE_CORAL_HANDOFF:
+                wantedPosition = 31.0;
+                break;
+            case HANDOFF:
+                wantedPosition = 27.4;
+                break;
+            case L1_SCORE_LINEUP:
+                wantedPosition = 1.5;
+                break;
+            case L1_SCORE_RELEASE:
+                wantedPosition = 0.5;
+                break;
+            case L2_SCORE_LINEUP:
+                wantedPosition = 7.3;
+                break;
+            case L2_SCORE_RELEASE:
+                wantedPosition = 7.3;
+                break;
+            case L3_SCORE_LINEUP:
+                wantedPosition = 17.2;
+                break;
+            case L3_SCORE_RELEASE:
+                wantedPosition = 17.2;
+                break;
+            case L4_SCORE_LINEUP:
+                wantedPosition = 33.0;
+                break;
+            case L4_SCORE_RELEASE:
+                wantedPosition = 33.0;
+                break;
+            case CLIMBING:
+                wantedPosition = 0.5;
+                break;
+            default:
+                break;
+        }
+        final double finalWantedPosition = wantedPosition;
+        setMMPosition(() -> finalWantedPosition);
+    }
+
+    private void logTelemetry() {
+        Telemetry.log("Elevator/SystemState", systemState);
+        Telemetry.log("Elevator/WantedState", wantedState);
+        Telemetry.log("Elevator/CurrentCommand", getCurrentCommandName());
+        Telemetry.log("Elevator/Voltage", getVoltage(), "volts");
+        Telemetry.log("Elevator/StatorCurrent", getStatorCurrent(), "amps");
+        Telemetry.log("Elevator/SupplyCurrent", getSupplyCurrent(), "amps");
+        Telemetry.log("Elevator/PositionDegrees", getPositionDegrees(), "degrees");
+        Telemetry.log("Elevator/RPM", getVelocityRPM(), "RPM");
+        Telemetry.log("Elevator/Temp", getTemp(), "deg_C");
+    }
+
+    // ------------------------------------------------------------------------
+    // Public state setters
+    // ------------------------------------------------------------------------
+    public void setWantedState(WantedState state) {
+        this.wantedState = state;
+    }
+
+    // ------------------------------------------------------------------------
+    // Helper methods
+    // ------------------------------------------------------------------------
     private void setInitialPosition() {
         if (isAttached()) {
             motor.setPosition(config.getInitPosition());
@@ -162,70 +326,6 @@ public class Elevator extends Mechanism {
 
     public Command resetToInitialPos() {
         return run(this::setInitialPosition);
-    }
-
-    // --------------------------------------------------------------------------------
-    // Custom Commands
-    // --------------------------------------------------------------------------------
-
-    /** Holds the position of the elevator. */
-    public Command holdPosition() {
-        return new Command() {
-            double holdPosition = 0; // rotations
-
-            // constructor
-            {
-                setName("Elevator.holdPosition");
-                addRequirements(Elevator.this);
-            }
-
-            @Override
-            public boolean runsWhenDisabled() {
-                return true;
-            }
-
-            @Override
-            public void initialize() {
-                holdPosition = getPositionRotations();
-                stop();
-            }
-
-            @Override
-            public void execute() {
-                double currentPosition = getPositionRotations();
-                if (Math.abs(currentPosition)
-                        < 0.3) { // Added so it doesn't try to hold when all the way down
-                    stop();
-                } else if (Math.abs(getVelocityRPM()) > config.holdMaxSpeedRPM) {
-                    stop(); // Don't hold if moving too fast
-                    holdPosition = currentPosition; // Update to a new hold position
-                } else {
-                    setMMPositionFoc(() -> holdPosition);
-                }
-            }
-
-            @Override
-            public void end(boolean interrupted) {
-                stop();
-            }
-        };
-    }
-
-    public Command move(DoubleSupplier rotations) {
-        return run(() -> setMMPositionFoc(rotations));
-    }
-
-    public Command zeroElevatorRoutine() {
-        return new FunctionalCommand(
-                        () -> toggleReverseSoftLimit(false), // init
-                        () -> setPercentOutput(config::getZeroSpeed), // execute
-                        b -> {
-                            tareMotor();
-                            toggleReverseSoftLimit(true); // end
-                        },
-                        () -> false, // isFinished
-                        this) // requirement
-                .withName("Elevator.zeroElevatorRoutine");
     }
 
     public DoubleSupplier getPositionMeters =

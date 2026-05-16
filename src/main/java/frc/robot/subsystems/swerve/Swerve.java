@@ -346,8 +346,13 @@ public class Swerve extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> impleme
     }
 
     protected Command reorientPilotAngle(double angleDegrees) {
-        return runOnce(() -> reorient(DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue)
-                                        == DriverStation.Alliance.Blue ? angleDegrees + 180 : angleDegrees));
+        return runOnce(
+                () ->
+                        reorient(
+                                DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue)
+                                                == DriverStation.Alliance.Blue
+                                        ? angleDegrees + 180
+                                        : angleDegrees));
     }
 
     protected double getClosestCardinal() {

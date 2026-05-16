@@ -6,7 +6,7 @@ import frc.robot.Robot;
 
 public class VisionStates {
 
-    private static Vision vision = Robot.getVision();
+    private static Vision vision = Robot.getVisionSubsystem();
 
     public static final Trigger usingRearTag = new Trigger(vision::isRearTagClosest);
     public static final Trigger seeingTag = new Trigger(vision::tagsInView);

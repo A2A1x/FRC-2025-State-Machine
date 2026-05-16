@@ -1,19 +1,23 @@
 package frc.robot.subsystems;
 
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.swerve.Swerve;
 import frc.spectrumLib.Telemetry;
 
 public class Superstructure extends SubsystemBase {
     private final Swerve swerveSubsystem;
+    private final Elevator elevatorSubsystem;
 
     private static final double REGULAR_TELEOP_TRANSLATION_COEFFICIENT = 1.0;
 
     public enum WantedSuperState {
         HOME,
         STOPPED,
+        DEFAULT_STATE,
 
         IDLE_EMPTY,
         IDLE_ALGAE,
@@ -32,20 +36,16 @@ public class Superstructure extends SubsystemBase {
         CORAL_RELEASE_HANDOFF,
 
         CORAL_L1_PREP,
-        CORAL_L1_RELEASE,
-        CORAL_L1_BACKAWAY,
+        CORAL_L1_SCORE,
 
-        CORAL_L2_PREP,
-        CORAL_L2_RELEASE,
-        CORAL_L2_BACKAWAY,
+        CORAL_L2_LEFT_SCORE,
+        CORAL_L2_RIGHT_SCORE,
 
-        CORAL_L3_PREP,
-        CORAL_L3_RELEASE,
-        CORAL_L3_BACKAWAY,
+        CORAL_L3_LEFT_SCORE,
+        CORAL_L3_RIGHT_SCORE,
 
-        CORAL_L4_PREP,
-        CORAL_L4_RELEASE,
-        CORAL_L4_BACKAWAY,
+        CORAL_L4_LEFT_SCORE,
+        CORAL_L4_RIGHT_SCORE,
 
         CLIMING_APPROACH,
         CLIMBING_HANG,
@@ -55,6 +55,7 @@ public class Superstructure extends SubsystemBase {
     public enum CurrentSuperState {
         HOME,
         STOPPED,
+        DEFAULT_STATE,
 
         IDLE_EMPTY,
         IDLE_ALGAE,
@@ -76,17 +77,26 @@ public class Superstructure extends SubsystemBase {
         CORAL_L1_RELEASE,
         CORAL_L1_BACKAWAY,
 
-        CORAL_L2_PREP,
-        CORAL_L2_RELEASE,
-        CORAL_L2_BACKAWAY,
+        CORAL_L2_LEFT_PREP,
+        CORAL_L2_LEFT_RELEASE,
+        CORAL_L2_LEFT_BACKAWAY,
+        CORAL_L2_RIGHT_PREP,
+        CORAL_L2_RIGHT_RELEASE,
+        CORAL_L2_RIGHT_BACKAWAY,
 
-        CORAL_L3_PREP,
-        CORAL_L3_RELEASE,
-        CORAL_L3_BACKAWAY,
+        CORAL_L3_LEFT_PREP,
+        CORAL_L3_LEFT_RELEASE,
+        CORAL_L3_LEFT_BACKAWAY,
+        CORAL_L3_RIGHT_PREP,
+        CORAL_L3_RIGHT_RELEASE,
+        CORAL_L3_RIGHT_BACKAWAY,
 
-        CORAL_L4_PREP,
-        CORAL_L4_RELEASE,
-        CORAL_L4_BACKAWAY,
+        CORAL_L4_LEFT_PREP,
+        CORAL_L4_LEFT_RELEASE,
+        CORAL_L4_LEFT_BACKAWAY,
+        CORAL_L4_RIGHT_PREP,
+        CORAL_L4_RIGHT_RELEASE,
+        CORAL_L4_RIGHT_BACKAWAY,
 
         CLIMING_APPROACH,
         CLIMBING_HANG,
@@ -96,8 +106,9 @@ public class Superstructure extends SubsystemBase {
     private WantedSuperState wantedSuperState = WantedSuperState.STOPPED;
     private CurrentSuperState currentSuperState = CurrentSuperState.STOPPED;
 
-    public Superstructure(Swerve swerveSubsystem) {
+    public Superstructure(Swerve swerveSubsystem, Elevator elevatorSubsystem) {
         this.swerveSubsystem = swerveSubsystem;
+        this.elevatorSubsystem = elevatorSubsystem;
     }
 
     public void periodic() {
@@ -112,6 +123,15 @@ public class Superstructure extends SubsystemBase {
         switch (wantedSuperState) {
             default:
                 currentSuperState = CurrentSuperState.STOPPED;
+                break;
+            case DEFAULT_STATE:
+                // if(hasCoral()) {
+                //     currentSuperState = CurrentSuperState.IDLE_CORAL;}
+                // else if(hasAlgae()) {
+                //     currentSuperState = CurrentSuperState.IDLE_ALGAE;}
+                // else {
+                //    currentSuperState = CurrentSuperState.IDLE_EMPTY;}
+                currentSuperState = CurrentSuperState.IDLE_EMPTY;
                 break;
             case HOME:
                 currentSuperState = CurrentSuperState.HOME;
@@ -148,22 +168,25 @@ public class Superstructure extends SubsystemBase {
     }
 
     private void stopped() {
-
+        elevatorSubsystem.setWantedState(Elevator.WantedState.STOPPED);
     }
 
     private void noPiece() {
         swerveSubsystem.setWantedState(Swerve.WantedState.TELEOP_DRIVE);
         swerveSubsystem.setTeleopVelocityCoefficient(REGULAR_TELEOP_TRANSLATION_COEFFICIENT);
+        elevatorSubsystem.setWantedState(Elevator.WantedState.STOPPED);
     }
 
     private void holdingCoral() {
         swerveSubsystem.setWantedState(Swerve.WantedState.TELEOP_DRIVE);
         swerveSubsystem.setTeleopVelocityCoefficient(REGULAR_TELEOP_TRANSLATION_COEFFICIENT);
+        elevatorSubsystem.setWantedState(Elevator.WantedState.STOWED_CORAL);
     }
 
     private void holdingAlgae() {
         swerveSubsystem.setWantedState(Swerve.WantedState.TELEOP_DRIVE);
         swerveSubsystem.setTeleopVelocityCoefficient(REGULAR_TELEOP_TRANSLATION_COEFFICIENT);
+        elevatorSubsystem.setWantedState(Elevator.WantedState.STOWED_ALGAE);
     }
 
     public void setWantedSuperState(WantedSuperState superState) {
@@ -172,5 +195,20 @@ public class Superstructure extends SubsystemBase {
 
     public Command setStateCommand(WantedSuperState superState) {
         return new InstantCommand(() -> setWantedSuperState(superState));
+    }
+
+    public Command configureButtonBinding(
+            WantedSuperState hasCoralCondition,
+            WantedSuperState hasAlgaeCondition,
+            WantedSuperState noPieceCondition) {
+        return Commands.either(
+                Commands.either(
+                        setStateCommand(hasCoralCondition),
+                        setStateCommand(hasAlgaeCondition),
+                        // hasCoral();
+                        () -> true),
+                setStateCommand(noPieceCondition),
+                // hasGamePiece();
+                () -> false);
     }
 }

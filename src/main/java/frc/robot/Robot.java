@@ -13,6 +13,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -26,6 +27,7 @@ import frc.robot.operator.Operator;
 import frc.robot.operator.Operator.OperatorConfig;
 import frc.robot.pilot.Pilot;
 import frc.robot.pilot.Pilot.PilotConfig;
+import frc.robot.subsystems.Superstructure;
 import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.elevator.Elevator.ElevatorConfig;
 import frc.robot.subsystems.swerve.Swerve;
@@ -33,7 +35,6 @@ import frc.robot.subsystems.swerve.SwerveConfig;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.Vision.VisionConfig;
 import frc.spectrumLib.Rio;
-import frc.spectrumLib.SpectrumRobot;
 import frc.spectrumLib.Telemetry;
 import frc.spectrumLib.Telemetry.PrintPriority;
 import frc.spectrumLib.util.CrashTracker;
@@ -45,32 +46,31 @@ import java.util.stream.Collectors;
 import lombok.Getter;
 import org.json.simple.parser.ParseException;
 
-public class Robot extends SpectrumRobot {
+public class Robot extends TimedRobot {
     @Getter private static RobotSim robotSim;
     @Getter private static Config config;
     static Telemetry telemetry = new Telemetry();
     @Getter private static final Field2d field2d = new Field2d();
 
-    public enum RobotFault {
-        OVERCURRENT,
-    }
-
     public static class Config {
-        public SwerveConfig swerve = new SwerveConfig();
-
         public PilotConfig pilot = new PilotConfig();
         public OperatorConfig operator = new OperatorConfig();
+        public SwerveConfig swerve = new SwerveConfig();
         public ElevatorConfig elevator = new ElevatorConfig();
         public VisionConfig vision = new VisionConfig();
     }
 
-    @Getter private static Swerve swerve;
-    @Getter private static Elevator elevator;
-    @Getter private static Operator operator;
     @Getter private static Pilot pilot;
-    @Getter private static Vision vision;
+    @Getter private static Operator operator;
     @Getter private static Auton auton;
-    public static boolean commandInit = false;
+
+    @Getter private static Swerve swerveSubsystem;
+    @Getter private static Elevator elevatorSubsystem;
+    @Getter private static Vision visionSubsystem;
+
+    @Getter private static Superstructure superstructure;
+
+    public static boolean autonWarmedUp = false;
 
     public Robot() {
         super();
@@ -94,18 +94,23 @@ public class Robot extends SpectrumRobot {
              */
             double canInitDelay = 0.1; // Delay between any mechanism with motor/can configs
 
-            operator = new Operator(config.operator);
             pilot = new Pilot(config.pilot);
-            swerve = new Swerve(config.swerve);
+            operator = new Operator(config.operator);
+
+            swerveSubsystem = new Swerve(config.swerve);
             Timer.delay(canInitDelay);
-            elevator = new Elevator(config.elevator);
+
+            elevatorSubsystem = new Elevator(config.elevator);
             Timer.delay(canInitDelay);
-            vision = new Vision(config.vision);
+
+            visionSubsystem = new Vision(config.vision);
             Timer.delay(canInitDelay);
+
             auton = new Auton();
 
-            // Setup Default Commands for all subsystems
-            setupDefaultCommands();
+            superstructure = new Superstructure(swerveSubsystem, elevatorSubsystem);
+
+            configureBindings();
 
             Telemetry.print("--- Robot Init Complete ---");
 
@@ -131,11 +136,26 @@ public class Robot extends SpectrumRobot {
                 });
     }
 
+    public void configureBindings() {
+        pilot.LB.onTrue(
+                superstructure.configureButtonBinding(
+                        Superstructure.WantedSuperState.CORAL_L4_LEFT_SCORE,
+                        Superstructure.WantedSuperState.ALGAE_NET_READY,
+                        Superstructure.WantedSuperState.ALGAE_INTAKE_FLOOR))
+                .onFalse(superstructure.setStateCommand(Superstructure.WantedSuperState.DEFAULT_STATE));
+        pilot.RB.onTrue(
+                superstructure.configureButtonBinding(
+                        Superstructure.WantedSuperState.CORAL_L4_RIGHT_SCORE,
+                        Superstructure.WantedSuperState.ALGAE_NET_READY,
+                        Superstructure.WantedSuperState.CORAL_INTAKE_FLOOR))
+                .onFalse(superstructure.setStateCommand(Superstructure.WantedSuperState.DEFAULT_STATE));
+    }
+
     public void setupSmartDashboardData() {
         SmartDashboard.putData("Field2d", field2d);
     }
 
-    @Override // Deprecated
+    @Override
     public void robotInit() {
         setupSmartDashboardData();
         WebServer.start(5800, Filesystem.getDeployDirectory().getPath());
@@ -160,7 +180,7 @@ public class Robot extends SpectrumRobot {
             CommandScheduler.getInstance().run();
 
             SmartDashboard.putNumber("MatchTime", DriverStation.getMatchTime());
-            field2d.setRobotPose(swerve.getRobotPose());
+            field2d.setRobotPose(swerveSubsystem.getRobotPose());
         } catch (Throwable t) {
             // intercept error and log it
             CrashTracker.logThrowableCrash(t);
@@ -172,7 +192,7 @@ public class Robot extends SpectrumRobot {
     public void disabledInit() {
         Telemetry.print("### Disabled Init Starting ### ");
 
-        if (!commandInit) {
+        if (!autonWarmedUp) {
             Command autonStartCommand =
                     Commands.sequence(
                                     FollowPathCommand.warmupCommand(),
@@ -180,8 +200,8 @@ public class Robot extends SpectrumRobot {
                                     new InstantCommand(
                                             () -> SmartDashboard.putBoolean("Initialized?", true)))
                             .ignoringDisable(true);
-            autonStartCommand.schedule();
-            commandInit = true;
+            CommandScheduler.getInstance().schedule(autonStartCommand);
+            autonWarmedUp = true;
         }
 
         Telemetry.print("### Disabled Init Complete ### ");
@@ -237,7 +257,7 @@ public class Robot extends SpectrumRobot {
                 }
 
                 // Set the robot pose to the starting pose of the first path
-                swerve.resetPose(
+                swerveSubsystem.resetPose(
                         pathPlannerPaths.get(0).getStartingHolonomicPose().orElse(new Pose2d()));
 
                 // Warm up the starting path
