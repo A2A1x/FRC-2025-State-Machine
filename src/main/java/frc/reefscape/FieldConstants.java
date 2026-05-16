@@ -275,6 +275,34 @@ public class FieldConstants {
         }
     }
 
+    public static Pose2d getDesiredPointToDriveToForAlgaeIntaking(
+            int tagID, Constants.SuperstructureConstants.ScoringDirection scoringDirection) {
+        if (tagID >= 1 && tagID <= 22) {
+            Pose2d tagPose = getTagPose(tagID).toPose2d();
+            double xOffset =
+                    Units.inchesToMeters(
+                            Constants.SuperstructureConstants
+                                    .X_OFFSET_FROM_TAG_FOR_INTAKING_ALGAE_INCHES);
+
+            Translation2d offsetFromTag = new Translation2d(xOffset, 0);
+
+            var transformedPose =
+                    tagPose.plus(
+                            new Transform2d(
+                                    offsetFromTag.getX(), offsetFromTag.getY(), Rotation2d.kZero));
+
+            if (scoringDirection == Constants.SuperstructureConstants.ScoringDirection.FRONT) {
+                transformedPose =
+                        new Pose2d(
+                                transformedPose.getTranslation(),
+                                transformedPose.getRotation().plus(Rotation2d.k180deg));
+            }
+            return transformedPose;
+        } else {
+            return Pose2d.kZero;
+        }
+    }
+
     /** Returns {@code true} if the robot is on the blue alliance. */
     public static boolean isBlue() {
         return DriverStation.getAlliance()

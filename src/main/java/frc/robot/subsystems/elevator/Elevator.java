@@ -92,8 +92,8 @@ public class Elevator extends Mechanism {
         STOPPED,
 
         ALGAE_GROUND_INTAKE,
-        ALGAE_INTAKE_L2,
-        ALGAE_INTAKE_L3,
+        ALGAE_L2_INTAKE,
+        ALGAE_L3_INTAKE,
         ALGAE_NET,
         ALGAE_PROCESSOR,
 
@@ -122,8 +122,8 @@ public class Elevator extends Mechanism {
         STOPPED,
 
         ALGAE_GROUND_INTAKE,
-        ALGAE_INTAKE_L2,
-        ALGAE_INTAKE_L3,
+        ALGAE_L2_INTAKE,
+        ALGAE_L3_INTAKE,
         ALGAE_NET,
         ALGAE_PROCESSOR,
 
@@ -182,10 +182,10 @@ public class Elevator extends Mechanism {
                 return SystemState.STOPPED;
             case ALGAE_GROUND_INTAKE:
                 return SystemState.ALGAE_GROUND_INTAKE;
-            case ALGAE_INTAKE_L2:
-                return SystemState.ALGAE_INTAKE_L2;
-            case ALGAE_INTAKE_L3:
-                return SystemState.ALGAE_INTAKE_L3;
+            case ALGAE_L2_INTAKE:
+                return SystemState.ALGAE_L2_INTAKE;
+            case ALGAE_L3_INTAKE:
+                return SystemState.ALGAE_L3_INTAKE;
             case ALGAE_NET:
                 return SystemState.ALGAE_NET;
             case ALGAE_PROCESSOR:
@@ -233,10 +233,10 @@ public class Elevator extends Mechanism {
             case ALGAE_GROUND_INTAKE:
                 wantedPosition = 10.5;
                 break;
-            case ALGAE_INTAKE_L2:
+            case ALGAE_L2_INTAKE:
                 wantedPosition = 14.4;
                 break;
-            case ALGAE_INTAKE_L3:
+            case ALGAE_L3_INTAKE:
                 wantedPosition = 24.9;
                 break;
             case ALGAE_NET:

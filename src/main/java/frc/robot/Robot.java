@@ -28,6 +28,8 @@ import frc.robot.operator.Operator.OperatorConfig;
 import frc.robot.pilot.Pilot;
 import frc.robot.pilot.Pilot.PilotConfig;
 import frc.robot.subsystems.Superstructure;
+import frc.robot.subsystems.claw.Claw;
+import frc.robot.subsystems.claw.Claw.ClawConfig;
 import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.elevator.Elevator.ElevatorConfig;
 import frc.robot.subsystems.shoulder.Shoulder;
@@ -60,6 +62,7 @@ public class Robot extends TimedRobot {
         public SwerveConfig swerve = new SwerveConfig();
         public ElevatorConfig elevator = new ElevatorConfig();
         public ShoulderConfig shoulder = new ShoulderConfig();
+        public ClawConfig claw = new ClawConfig();
         public VisionConfig vision = new VisionConfig();
     }
 
@@ -70,6 +73,7 @@ public class Robot extends TimedRobot {
     @Getter private static Swerve swerveSubsystem;
     @Getter private static Elevator elevatorSubsystem;
     @Getter private static Shoulder shoulderSubsystem;
+    @Getter private static Claw clawSubsystem;
     @Getter private static Vision visionSubsystem;
 
     @Getter private static Superstructure superstructure;
@@ -110,13 +114,17 @@ public class Robot extends TimedRobot {
             shoulderSubsystem = new Shoulder(config.shoulder);
             Timer.delay(canInitDelay);
 
+            clawSubsystem = new Claw(config.claw);
+            Timer.delay(canInitDelay);
+
             visionSubsystem = new Vision(config.vision);
             Timer.delay(canInitDelay);
 
             auton = new Auton();
 
             superstructure =
-                    new Superstructure(swerveSubsystem, elevatorSubsystem, shoulderSubsystem);
+                    new Superstructure(
+                            swerveSubsystem, elevatorSubsystem, shoulderSubsystem, clawSubsystem);
 
             configureBindings();
 
@@ -149,8 +157,8 @@ public class Robot extends TimedRobot {
                 .onTrue(
                         superstructure.configureButtonBinding(
                                 Superstructure.WantedSuperState.CORAL_L4_LEFT_SCORE,
-                                Superstructure.WantedSuperState.ALGAE_NET_SCORE,
-                                Superstructure.WantedSuperState.ALGAE_INTAKE_FLOOR))
+                                Superstructure.WantedSuperState.ALGAE_NET_PREP,
+                                Superstructure.WantedSuperState.ALGAE_GROUND_INTAKE))
                 .onFalse(
                         superstructure.setStateCommand(
                                 Superstructure.WantedSuperState.DEFAULT_STATE));
@@ -168,7 +176,7 @@ public class Robot extends TimedRobot {
                         superstructure.configureButtonBinding(
                                 Superstructure.WantedSuperState.CORAL_L3_LEFT_SCORE,
                                 Superstructure.WantedSuperState.ALGAE_PROCESSOR_SCORE,
-                                Superstructure.WantedSuperState.ALGAE_INTAKE_L3))
+                                Superstructure.WantedSuperState.ALGAE_L3_INTAKE))
                 .onFalse(
                         superstructure.setStateCommand(
                                 Superstructure.WantedSuperState.DEFAULT_STATE));
@@ -177,10 +185,12 @@ public class Robot extends TimedRobot {
                         superstructure.configureButtonBinding(
                                 Superstructure.WantedSuperState.CORAL_L3_RIGHT_SCORE,
                                 Superstructure.WantedSuperState.ALGAE_PROCESSOR_SCORE,
-                                Superstructure.WantedSuperState.ALGAE_INTAKE_L3))
+                                Superstructure.WantedSuperState.ALGAE_L3_INTAKE))
                 .onFalse(
                         superstructure.setStateCommand(
                                 Superstructure.WantedSuperState.DEFAULT_STATE));
+        pilot.dPadLeft.onTrue(clawSubsystem.forceSetHoldingCoralTrueCommand());
+        pilot.dPadRight.onTrue(clawSubsystem.forceSetHoldingAlgaeTrueCommand());
     }
 
     public void setupSmartDashboardData() {

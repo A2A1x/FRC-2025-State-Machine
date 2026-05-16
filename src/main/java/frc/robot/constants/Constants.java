@@ -11,7 +11,7 @@ public class Constants {
         public static final double X_OFFSET_FROM_TAG_FOR_L1_TOP_SCORING_INCHES = 19.25;
 
         public static final double X_OFFSET_FROM_TAG_FOR_SCORING_INCHES = 22.0;
-        public static final double X_OFFSET_FROM_TAG_FOR_INTAKING_ALGAE_INCHES = 18.0;
+        public static final double X_OFFSET_FROM_TAG_FOR_INTAKING_ALGAE_INCHES = 22.0;
         public static final double X_OFFSET_FROM_TAG_FOR_INTERMEDIATE_INTAKING_ALGAE_INCHES = 30.0;
         public static final double X_OFFSET_FROM_TAG_FOR_BACKOUT_INTAKING_ALGAE_INCHES = 50.0;
         public static final double X_OFFSET_FROM_TAG_FOR_L1_BACKOUT_INCHES = 10.0;

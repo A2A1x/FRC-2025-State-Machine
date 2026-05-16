@@ -82,11 +82,7 @@ public class Shoulder extends Mechanism {
             configReverseSoftLimit(-1, true);
             configForwardSoftLimit(1, true);
             configNeutralBrakeMode(true);
-            if (Robot.isSimulation()) {
-                configCounterClockwise_Positive();
-            } else {
-                configCounterClockwise_Positive();
-            }
+            configCounterClockwise_Positive();
             configGravityType(true);
             setSimRatio(sensorToMechanismRatio);
         }
@@ -150,8 +146,8 @@ public class Shoulder extends Mechanism {
         CLIMB_PREP,
 
         ALGAE_PROCESSOR,
-        ALGAE_INTAKE_L2,
-        ALGAE_INTAKE_L3,
+        ALGAE_L2_INTAKE,
+        ALGAE_L3_INTAKE,
         ALGAE_NET,
 
         STOWED_CORAL,
@@ -183,8 +179,8 @@ public class Shoulder extends Mechanism {
         CLIMB_PREP,
 
         ALGAE_PROCESSOR,
-        ALGAE_INTAKE_L2,
-        ALGAE_INTAKE_L3,
+        ALGAE_L2_INTAKE,
+        ALGAE_L3_INTAKE,
         ALGAE_NET,
 
         STOWED_CORAL,
@@ -244,10 +240,10 @@ public class Shoulder extends Mechanism {
                 return SystemState.CLIMB_PREP;
             case ALGAE_PROCESSOR:
                 return SystemState.ALGAE_PROCESSOR;
-            case ALGAE_INTAKE_L2:
-                return SystemState.ALGAE_INTAKE_L2;
-            case ALGAE_INTAKE_L3:
-                return SystemState.ALGAE_INTAKE_L3;
+            case ALGAE_L2_INTAKE:
+                return SystemState.ALGAE_L2_INTAKE;
+            case ALGAE_L3_INTAKE:
+                return SystemState.ALGAE_L3_INTAKE;
             case ALGAE_NET:
                 return SystemState.ALGAE_NET;
             case CORAL_L2_LINEUP:
@@ -304,10 +300,10 @@ public class Shoulder extends Mechanism {
             case ALGAE_PROCESSOR:
                 wantedDegrees = -143.877;
                 break;
-            case ALGAE_INTAKE_L2:
+            case ALGAE_L2_INTAKE:
                 wantedDegrees = -88;
                 break;
-            case ALGAE_INTAKE_L3:
+            case ALGAE_L3_INTAKE:
                 wantedDegrees = -88;
                 break;
             case ALGAE_NET:
@@ -361,7 +357,6 @@ public class Shoulder extends Mechanism {
     // ------------------------------------------------------------------------
     // Public helpers
     // ------------------------------------------------------------------------
-
     public void setWantedState(WantedState state) {
         wantedState = state;
     }

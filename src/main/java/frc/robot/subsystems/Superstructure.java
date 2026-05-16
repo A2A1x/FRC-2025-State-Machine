@@ -1,6 +1,7 @@
 package frc.robot.subsystems;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -9,6 +10,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.reefscape.FieldConstants;
 import frc.reefscape.FieldHelpers;
 import frc.robot.constants.Constants;
+import frc.robot.subsystems.claw.Claw;
 import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.shoulder.Shoulder;
 import frc.robot.subsystems.swerve.Swerve;
@@ -18,6 +20,7 @@ public class Superstructure extends SubsystemBase {
     private final Swerve swerveSubsystem;
     private final Elevator elevatorSubsystem;
     private final Shoulder shoulderSubsystem;
+    private final Claw clawSubsystem;
 
     private static final double REGULAR_TELEOP_TRANSLATION_COEFFICIENT = 1.0;
 
@@ -30,9 +33,10 @@ public class Superstructure extends SubsystemBase {
         IDLE_ALGAE,
         IDLE_CORAL,
 
-        ALGAE_INTAKE_FLOOR,
-        ALGAE_INTAKE_L2,
-        ALGAE_INTAKE_L3,
+        ALGAE_GROUND_INTAKE,
+        ALGAE_L2_INTAKE,
+        ALGAE_L3_INTAKE,
+        ALGAE_NET_PREP,
         ALGAE_NET_SCORE,
         ALGAE_PROCESSOR_SCORE,
 
@@ -67,9 +71,10 @@ public class Superstructure extends SubsystemBase {
         IDLE_ALGAE,
         IDLE_CORAL,
 
-        ALGAE_INTAKE_FLOOR,
-        ALGAE_INTAKE_L2,
-        ALGAE_INTAKE_L3,
+        ALGAE_GROUND_INTAKE,
+        ALGAE_L2_INTAKE,
+        ALGAE_L3_INTAKE,
+        ALGAE_NET_PREP,
         ALGAE_NET_SCORE,
         ALGAE_PROCESSOR_SCORE,
 
@@ -99,15 +104,21 @@ public class Superstructure extends SubsystemBase {
     private CurrentSuperState currentSuperState = CurrentSuperState.DEFAULT_STATE;
 
     public Superstructure(
-            Swerve swerveSubsystem, Elevator elevatorSubsystem, Shoulder shoulderSubsystem) {
+            Swerve swerveSubsystem,
+            Elevator elevatorSubsystem,
+            Shoulder shoulderSubsystem,
+            Claw clawSubsystem) {
         this.swerveSubsystem = swerveSubsystem;
         this.elevatorSubsystem = elevatorSubsystem;
         this.shoulderSubsystem = shoulderSubsystem;
+        this.clawSubsystem = clawSubsystem;
     }
 
     public void periodic() {
         Telemetry.log("Superstructure/WantedSuperState", wantedSuperState.toString());
         Telemetry.log("Superstructure/CurrentSuperState", currentSuperState.toString());
+        Telemetry.log("Superstructure/HasCoral", hasCoral());
+        Telemetry.log("Superstructure/HasAlgae", hasAlgae());
 
         currentSuperState = handStateTransitions();
         applyStates();
@@ -151,6 +162,21 @@ public class Superstructure extends SubsystemBase {
             case CORAL_L3_RIGHT_SCORE:
                 currentSuperState = CurrentSuperState.CORAL_L3_RIGHT_SCORE;
                 break;
+            case ALGAE_GROUND_INTAKE:
+                currentSuperState = CurrentSuperState.ALGAE_GROUND_INTAKE;
+                break;
+            case ALGAE_L2_INTAKE:
+                currentSuperState = CurrentSuperState.ALGAE_L2_INTAKE;
+                break;
+            case ALGAE_L3_INTAKE:
+                currentSuperState = CurrentSuperState.ALGAE_L3_INTAKE;
+                break;
+            case ALGAE_NET_PREP:
+                currentSuperState = CurrentSuperState.ALGAE_NET_PREP;
+                break;
+            case ALGAE_NET_SCORE:
+                currentSuperState = CurrentSuperState.ALGAE_NET_SCORE;
+                break;
         }
         return currentSuperState;
     }
@@ -181,6 +207,21 @@ public class Superstructure extends SubsystemBase {
             case CORAL_L3_RIGHT_SCORE:
                 scoreL3Coral(Constants.SuperstructureConstants.ScoringSide.RIGHT);
                 break;
+            case ALGAE_GROUND_INTAKE:
+                intakeGroundAlgae();
+                break;
+            case ALGAE_L2_INTAKE:
+                intakeL2Algae(Constants.SuperstructureConstants.ScoringDirection.FRONT);
+                break;
+            case ALGAE_L3_INTAKE:
+                intakeL3Algae(Constants.SuperstructureConstants.ScoringDirection.FRONT);
+                break;
+            case ALGAE_NET_PREP:
+                prepAlgaeNet();
+                break;
+            case ALGAE_NET_SCORE:
+                scoreAlgaeNet();
+                break;
             default:
         }
     }
@@ -189,12 +230,14 @@ public class Superstructure extends SubsystemBase {
         swerveSubsystem.setWantedState(Swerve.WantedState.TELEOP_DRIVE);
         swerveSubsystem.setTeleopVelocityCoefficient(REGULAR_TELEOP_TRANSLATION_COEFFICIENT);
         elevatorSubsystem.setWantedState(Elevator.WantedState.STOPPED);
+        shoulderSubsystem.setWantedState(Shoulder.WantedState.STOPPED);
+        clawSubsystem.setWantedState(Claw.WantedState.OFF);
     }
 
     private void noPiece() {
         swerveSubsystem.setWantedState(Swerve.WantedState.TELEOP_DRIVE);
         swerveSubsystem.setTeleopVelocityCoefficient(REGULAR_TELEOP_TRANSLATION_COEFFICIENT);
-        // clawSubsystem.setWantedState(Claw.WantedState.IDLE);
+        clawSubsystem.setWantedState(Claw.WantedState.OFF);
         shoulderSubsystem.setWantedState(Shoulder.WantedState.HOME);
         elevatorSubsystem.setWantedState(Elevator.WantedState.HOME);
     }
@@ -202,7 +245,7 @@ public class Superstructure extends SubsystemBase {
     private void holdingCoral() {
         swerveSubsystem.setWantedState(Swerve.WantedState.TELEOP_DRIVE);
         swerveSubsystem.setTeleopVelocityCoefficient(REGULAR_TELEOP_TRANSLATION_COEFFICIENT);
-        // clawSubsystem.setWantedState(Claw.WantedState.GRIP_CORAL);
+        clawSubsystem.setWantedState(Claw.WantedState.COLLECT_CORAL);
         shoulderSubsystem.setWantedState(Shoulder.WantedState.STOWED_CORAL);
         elevatorSubsystem.setWantedState(Elevator.WantedState.STOWED_CORAL);
     }
@@ -210,21 +253,20 @@ public class Superstructure extends SubsystemBase {
     private void holdingAlgae() {
         swerveSubsystem.setWantedState(Swerve.WantedState.TELEOP_DRIVE);
         swerveSubsystem.setTeleopVelocityCoefficient(REGULAR_TELEOP_TRANSLATION_COEFFICIENT);
-        // clawSubsystem.setWantedState(Claw.WantedState.GRIP_ALGAE);
+        clawSubsystem.setWantedState(Claw.WantedState.COLLECT_ALGAE);
         shoulderSubsystem.setWantedState(Shoulder.WantedState.STOWED_ALGAE);
         elevatorSubsystem.setWantedState(Elevator.WantedState.STOWED_ALGAE);
     }
 
     private void scoreL4Coral(Constants.SuperstructureConstants.ScoringSide scoringSide) {
-
-        // clawSubsystem.setWantedState(Claw.WantedState.GRIP_CORAL);
+        clawSubsystem.setWantedState(Claw.WantedState.COLLECT_CORAL);
         shoulderSubsystem.setWantedState(Shoulder.WantedState.CORAL_L4_LINEUP);
         elevatorSubsystem.setWantedState(Elevator.WantedState.CORAL_L4_LINEUP);
 
         driveToCoralScoringPose(scoringSide);
 
         if (isReadyToEject()) {
-            // clawSubsystem.setWantedState(Claw.WantedState.RELEASE);
+            clawSubsystem.setWantedState(Claw.WantedState.EJECT_CORAL);
             shoulderSubsystem.setWantedState(Shoulder.WantedState.CORAL_L4_RELEASE);
             elevatorSubsystem.setWantedState(Elevator.WantedState.CORAL_L4_RELEASE);
 
@@ -235,15 +277,14 @@ public class Superstructure extends SubsystemBase {
     }
 
     private void scoreL3Coral(Constants.SuperstructureConstants.ScoringSide scoringSide) {
-
-        // clawSubsystem.setWantedState(Claw.WantedState.GRIP_CORAL);
+        clawSubsystem.setWantedState(Claw.WantedState.COLLECT_CORAL);
         shoulderSubsystem.setWantedState(Shoulder.WantedState.CORAL_L3_LINEUP);
         elevatorSubsystem.setWantedState(Elevator.WantedState.CORAL_L3_LINEUP);
 
         driveToCoralScoringPose(scoringSide);
 
         if (isReadyToEject()) {
-            // clawSubsystem.setWantedState(Claw.WantedState.RELEASE);
+            clawSubsystem.setWantedState(Claw.WantedState.EJECT_CORAL);
             shoulderSubsystem.setWantedState(Shoulder.WantedState.CORAL_L3_RELEASE);
             elevatorSubsystem.setWantedState(Elevator.WantedState.CORAL_L3_RELEASE);
 
@@ -253,12 +294,45 @@ public class Superstructure extends SubsystemBase {
         }
     }
 
+    private void prepAlgaeNet() {
+        swerveSubsystem.setTargetRotation(Rotation2d.kZero);
+
+        if (swerveSubsystem.isAtDesiredRotation()) {
+            clawSubsystem.setWantedState(Claw.WantedState.COLLECT_ALGAE);
+            shoulderSubsystem.setWantedState(Shoulder.WantedState.ALGAE_NET);
+            elevatorSubsystem.setWantedState(Elevator.WantedState.ALGAE_NET);
+        }
+    }
+
+    private void scoreAlgaeNet() {
+        clawSubsystem.setWantedState(Claw.WantedState.EJECT_ALGAE);
+        shoulderSubsystem.setWantedState(Shoulder.WantedState.ALGAE_NET);
+        elevatorSubsystem.setWantedState(Elevator.WantedState.ALGAE_NET);
+    }
+
+    private void intakeL3Algae(
+            Constants.SuperstructureConstants.ScoringDirection scoringDirection) {
+        clawSubsystem.setWantedState(Claw.WantedState.COLLECT_ALGAE);
+        shoulderSubsystem.setWantedState(Shoulder.WantedState.ALGAE_L3_INTAKE);
+        elevatorSubsystem.setWantedState(Elevator.WantedState.ALGAE_L3_INTAKE);
+        driveToAlgaeIntakePose(scoringDirection);
+    }
+
+    private void intakeL2Algae(
+            Constants.SuperstructureConstants.ScoringDirection scoringDirection) {
+        clawSubsystem.setWantedState(Claw.WantedState.COLLECT_ALGAE);
+        shoulderSubsystem.setWantedState(Shoulder.WantedState.ALGAE_L2_INTAKE);
+        elevatorSubsystem.setWantedState(Elevator.WantedState.ALGAE_L2_INTAKE);
+        driveToAlgaeIntakePose(scoringDirection);
+    }
+
+    private void intakeGroundAlgae() {
+        clawSubsystem.setWantedState(Claw.WantedState.COLLECT_ALGAE);
+        shoulderSubsystem.setWantedState(Shoulder.WantedState.ALGAE_GROUND_INTAKE);
+        elevatorSubsystem.setWantedState(Elevator.WantedState.ALGAE_GROUND_INTAKE);
+    }
+
     private boolean isReadyToEject() {
-        // return elevatorSubsystem.isAtSetpoint()
-        //         && shoulderSubsystem.isAtSetpoint()
-        //         && clawSubsystem.isAtSetpoint();
-        //         swerveSubsystem.isAtDriveToPointSetpoint()
-        // && swerveSubsystem.isAtDesiredRotation(Units.degreesToRadians(2.0))
         return swerveSubsystem.isAtDriveToPointSetpoint()
                 && swerveSubsystem.isAtDesiredRotation(Units.degreesToRadians(2.0))
                 && elevatorSubsystem.isAtSetpoint()
@@ -275,9 +349,26 @@ public class Superstructure extends SubsystemBase {
         swerveSubsystem.setDesiredPoseForDriveToPoint(desiredPoseToDriveTo);
     }
 
-    // private boolean hasCoral() {
-    //     return clawSubsystem.hasCoral();
-    // }
+    private void driveToAlgaeIntakePose(
+            Constants.SuperstructureConstants.ScoringDirection scoringDirection) {
+        Pose2d desiredPoseToDriveTo =
+                FieldConstants.getDesiredPointToDriveToForAlgaeIntaking(
+                        FieldHelpers.getReefZoneTagID(swerveSubsystem.getRobotPose()),
+                        scoringDirection);
+        swerveSubsystem.setDesiredPoseForDriveToPoint(desiredPoseToDriveTo);
+    }
+
+    public boolean hasCoral() {
+        return clawSubsystem.hasCoral();
+    }
+
+    public boolean hasAlgae() {
+        return clawSubsystem.hasAlgae();
+    }
+
+    public boolean hasGamePiece() {
+        return hasCoral() || hasAlgae();
+    }
 
     public void setWantedSuperState(WantedSuperState superState) {
         this.wantedSuperState = superState;
@@ -295,10 +386,8 @@ public class Superstructure extends SubsystemBase {
                 Commands.either(
                         setStateCommand(hasCoralCondition),
                         setStateCommand(hasAlgaeCondition),
-                        // hasCoral();
-                        () -> true),
+                        () -> hasCoral()),
                 setStateCommand(noPieceCondition),
-                // hasGamePiece();
-                () -> true);
+                () -> hasGamePiece());
     }
 }
