@@ -11,14 +11,12 @@ import edu.wpi.first.wpilibj.util.Color8Bit;
 // Always move the root/origin to change it's display position
 // Looking at the robot from the left view (right side of the robot)
 public class RobotSim {
-    public static final double height = 140; // 60;
-    public static final double width = 60;
+    public static final double heightMeters = Units.inchesToMeters(100.0);
+    public static final double widthMeters = Units.inchesToMeters(75.0);
 
-    public static final Translation2d origin =
-            new Translation2d(Units.inchesToMeters(width / 2), 0.0);
+    public static final Translation2d origin = new Translation2d(0.0, 0.0);
 
-    public static final Mechanism2d leftView =
-            new Mechanism2d(Units.inchesToMeters(width) * 2, Units.inchesToMeters(height));
+    public static final Mechanism2d leftView = new Mechanism2d(widthMeters, heightMeters);
 
     public RobotSim() {
         SmartDashboard.putData("LeftView", RobotSim.leftView);

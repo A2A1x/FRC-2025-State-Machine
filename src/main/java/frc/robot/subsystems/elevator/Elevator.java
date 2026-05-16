@@ -47,18 +47,16 @@ public class Elevator extends Mechanism {
         @Getter private double torqueCurrentLimit = 160; // 160;
 
         /* Sim properties */
-        @Getter private double kElevatorGearing = 1.7;
+        @Getter private double kElevatorGearing = 2.63;
         @Getter private double kCarriageMass = 13.6078;
         @Getter private double kElevatorDrumRadiusMeters = Units.inchesToMeters(0.955 / 2);
-        @Getter private double initialX = 0.8;
-        @Getter private double initialY = 0.35;
+        @Getter private double initialX = RobotSim.widthMeters / 2;
+        @Getter private double initialY = Units.inchesToMeters(5);
         @Getter private double angle = 90;
-        @Getter private double staticLength = 75;
-        @Getter private double movingLength = 50;
-        @Getter public int LineWeight = 4;
+        @Getter private double staticLength = 40;
+        @Getter private double movingLength = 40;
         @Getter public Color8Bit Stage1Color = new Color8Bit(255, 150, 0);
         @Getter public Color8Bit Stage2Color = new Color8Bit(0, 200, 255);
-        @Getter private double maxSpeedMetersPerSec = 3.0;
 
         public ElevatorConfig() {
             super("ElevatorFront", 40, Rio.CANIVORE);
@@ -296,15 +294,14 @@ public class Elevator extends Mechanism {
     }
 
     private void logTelemetry() {
-        Telemetry.log("Elevator/SystemState", systemState);
-        Telemetry.log("Elevator/WantedState", wantedState);
-        Telemetry.log("Elevator/CurrentCommand", getCurrentCommandName());
+        Telemetry.log("Elevator/SystemState", systemState.toString());
+        Telemetry.log("Elevator/WantedState", wantedState.toString());
         Telemetry.log("Elevator/Voltage", getVoltage(), "volts");
         Telemetry.log("Elevator/StatorCurrent", getStatorCurrent(), "amps");
         Telemetry.log("Elevator/SupplyCurrent", getSupplyCurrent(), "amps");
-        Telemetry.log("Elevator/PositionDegrees", getPositionDegrees(), "degrees");
-        Telemetry.log("Elevator/RPM", getVelocityRPM(), "RPM");
         Telemetry.log("Elevator/Temp", getTemp(), "deg_C");
+        Telemetry.log("Elevator/PositionRotations", getPositionRotations(), "rotations");
+        Telemetry.log("Elevator/PositionMeters", getPositionMeters.getAsDouble(), "meters");
     }
 
     // ------------------------------------------------------------------------
@@ -366,7 +363,7 @@ public class Elevator extends Mechanism {
                             .setAngle(config.angle)
                             .setMovingLength(config.getMovingLength())
                             .setStaticLength(config.getStaticLength())
-                            .setMaxHeight(100),
+                            .setMaxHeight(40),
                     mech,
                     elevatorMotorSim,
                     "1" + config.getName()); // added 1 to the name to create it first

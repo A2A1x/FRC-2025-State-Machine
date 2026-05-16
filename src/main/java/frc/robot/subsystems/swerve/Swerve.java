@@ -227,12 +227,7 @@ public class Swerve extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> impleme
                                 ? yMagnitude
                                 : -yMagnitude)
                         * teleopVelocityCoefficient;
-        double angularVelocity =
-                (DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue)
-                                        == DriverStation.Alliance.Blue
-                                ? -angularMagnitude
-                                : angularMagnitude)
-                        * rotationVelocityCoefficient;
+        double angularVelocity = angularMagnitude * rotationVelocityCoefficient;
 
         Rotation2d skewCompensationFactor =
                 Rotation2d.fromRadians(

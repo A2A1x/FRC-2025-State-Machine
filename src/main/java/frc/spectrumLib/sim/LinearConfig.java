@@ -68,7 +68,6 @@ public class LinearConfig {
 
     public LinearConfig setStaticLength(double lengthInches) {
         this.staticLength = Units.inchesToMeters(lengthInches);
-        ;
         return this;
     }
 
