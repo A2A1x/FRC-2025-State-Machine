@@ -373,6 +373,11 @@ public class Shoulder extends Mechanism {
         return isAtTargetPosition(config::getTriggerTolerance);
     }
 
+    public boolean shoulderLow() {
+        double currentDegrees = getPositionDegrees() - config.getOffset();
+        return currentDegrees < -90 || currentDegrees > 90;
+    }
+
     public double checkMoveOverTop(DoubleSupplier degrees) {
         double newDeg = degrees.getAsDouble();
         if (newDeg < -90 && (getPositionDegrees() - config.offset) > 90) {
@@ -394,7 +399,6 @@ public class Shoulder extends Mechanism {
     // ----------------------------------------------------------------------------
     // Private helpers
     // ---------------------------------------------------------------------------
-
     void setInitialPosition() {
         if (canCoder != null) {
             if (canCoder.isAttached()

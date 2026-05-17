@@ -131,13 +131,13 @@ public class Superstructure extends SubsystemBase {
                 currentSuperState = CurrentSuperState.STOPPED;
                 break;
             case DEFAULT_STATE:
-                // if(hasCoral()) {
-                //     currentSuperState = CurrentSuperState.IDLE_CORAL;}
-                // else if(hasAlgae()) {
-                //     currentSuperState = CurrentSuperState.IDLE_ALGAE;}
-                // else {
-                //    currentSuperState = CurrentSuperState.IDLE_EMPTY;}
-                currentSuperState = CurrentSuperState.IDLE_EMPTY;
+                if (hasCoral()) {
+                    currentSuperState = CurrentSuperState.IDLE_CORAL;
+                } else if (hasAlgae()) {
+                    currentSuperState = CurrentSuperState.IDLE_ALGAE;
+                } else {
+                    currentSuperState = CurrentSuperState.IDLE_EMPTY;
+                }
                 break;
             case HOME:
                 currentSuperState = CurrentSuperState.HOME;
@@ -402,6 +402,10 @@ public class Superstructure extends SubsystemBase {
 
     public boolean hasGamePiece() {
         return hasCoral() || hasAlgae();
+    }
+
+    public boolean armLow() {
+        return shoulderSubsystem.shoulderLow();
     }
 
     public void setWantedSuperState(WantedSuperState superState) {

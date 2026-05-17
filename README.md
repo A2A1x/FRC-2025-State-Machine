@@ -82,7 +82,7 @@ Climbing: `CLIMING_APPROACH`, `CLIMBING_HANG`, `CLIMBING_LOCK`.
 
 ### Transition + apply
 
-[Superstructure.java:128](src/main/java/frc/robot/subsystems/Superstructure.java#L128) (`handStateTransitions`) is mostly a passthrough — most wanted states map directly onto the matching current state. `DEFAULT_STATE` currently always resolves to `IDLE_EMPTY` (the game-piece-aware branch is commented out pending sensor work).
+[Superstructure.java:128](src/main/java/frc/robot/subsystems/Superstructure.java#L128) (`handStateTransitions`) is mostly a passthrough — most wanted states map directly onto the matching current state. `DEFAULT_STATE` resolves based on what the claw is holding: `IDLE_CORAL` if `hasCoral()`, `IDLE_ALGAE` if `hasAlgae()`, otherwise `IDLE_EMPTY`.
 
 [Superstructure.java:191](src/main/java/frc/robot/subsystems/Superstructure.java#L191) (`applyStates`) dispatches to per-state helpers. Each helper composes a coherent robot pose:
 
@@ -152,6 +152,8 @@ Two TalonFX motors (`ElevatorFront` + `ElevatorRear` follower, aligned), Motion 
 
 [isAtSetpoint](src/main/java/frc/robot/subsystems/elevator/Elevator.java#L326) uses `triggerTolerance = 1.15` rotations.
 
+**Arm-collision guard** ([Elevator.java:291-295](src/main/java/frc/robot/subsystems/elevator/Elevator.java#L291-L295)): before issuing the Motion Magic setpoint, if the commanded position would drop below 10 rotations while the elevator is currently above 10 *and* `Superstructure.armLow()` is true, the target is clamped to 10.5. This blocks descents through the shoulder's swing volume while the arm is tipped past horizontal.
+
 ### Shoulder
 
 File: [src/main/java/frc/robot/subsystems/shoulder/Shoulder.java](src/main/java/frc/robot/subsystems/shoulder/Shoulder.java)
@@ -179,6 +181,8 @@ Position table (degrees, before the +90° offset):
 | `PRE_CORAL_HANDOFF`, `HANDOFF` | −180 |
 
 [checkMoveOverTop](src/main/java/frc/robot/subsystems/shoulder/Shoulder.java#L376) wraps targets ±360° so the shoulder takes the short path past vertical when transitioning between front and back hemispheres. `triggerTolerance = 3°`.
+
+[shoulderLow](src/main/java/frc/robot/subsystems/shoulder/Shoulder.java#L376) returns true when the post-offset shoulder angle is below −90° or above +90° — i.e., the arm is tipped past horizontal in either direction. It's exposed up through [Superstructure.armLow](src/main/java/frc/robot/subsystems/Superstructure.java#L407) and consumed by the Elevator's arm-collision guard.
 
 ### Claw
 

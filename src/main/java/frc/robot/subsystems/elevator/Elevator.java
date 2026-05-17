@@ -6,6 +6,7 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.smartdashboard.Mechanism2d;
 import edu.wpi.first.wpilibj.util.Color8Bit;
 import edu.wpi.first.wpilibj2.command.Command;
+import frc.robot.Robot;
 import frc.robot.RobotSim;
 import frc.spectrumLib.Rio;
 import frc.spectrumLib.Telemetry;
@@ -286,6 +287,11 @@ public class Elevator extends Mechanism {
                 break;
             default:
                 break;
+        }
+        if (wantedPosition < 10
+                && getPositionRotations() >= 10
+                && Robot.getSuperstructure().armLow()) {
+            wantedPosition = 10.5;
         }
         final double finalWantedPosition = wantedPosition;
         setMMPositionFoc(() -> finalWantedPosition);
