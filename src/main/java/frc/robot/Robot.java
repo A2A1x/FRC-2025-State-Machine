@@ -189,6 +189,23 @@ public class Robot extends TimedRobot {
                 .onFalse(
                         superstructure.setStateCommand(
                                 Superstructure.WantedSuperState.DEFAULT_STATE));
+        pilot.AButton.onTrue(
+                        superstructure.configureButtonBinding(
+                                Superstructure.WantedSuperState.CORAL_L2_LEFT_SCORE,
+                                Superstructure.WantedSuperState.DEFAULT_STATE,
+                                Superstructure.WantedSuperState.ALGAE_L2_INTAKE))
+                .onFalse(
+                        superstructure.setStateCommand(
+                                Superstructure.WantedSuperState.DEFAULT_STATE));
+        pilot.BButton.onTrue(
+                        superstructure.configureButtonBinding(
+                                Superstructure.WantedSuperState.CORAL_L2_RIGHT_SCORE,
+                                Superstructure.WantedSuperState.DEFAULT_STATE,
+                                Superstructure.WantedSuperState.ALGAE_L2_INTAKE))
+                .onFalse(
+                        superstructure.setStateCommand(
+                                Superstructure.WantedSuperState.DEFAULT_STATE));
+
         pilot.dPadLeft.onTrue(clawSubsystem.forceSetHoldingCoralTrueCommand());
         pilot.dPadRight.onTrue(clawSubsystem.forceSetHoldingAlgaeTrueCommand());
     }

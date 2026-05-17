@@ -23,6 +23,7 @@ public class Superstructure extends SubsystemBase {
     private final Claw clawSubsystem;
 
     private static final double REGULAR_TELEOP_TRANSLATION_COEFFICIENT = 1.0;
+    private static final double ARM_HIGH_TELEOP_TRANSLATION_COEFFICIENT = 0.1;
 
     public enum WantedSuperState {
         HOME,
@@ -162,6 +163,12 @@ public class Superstructure extends SubsystemBase {
             case CORAL_L3_RIGHT_SCORE:
                 currentSuperState = CurrentSuperState.CORAL_L3_RIGHT_SCORE;
                 break;
+            case CORAL_L2_LEFT_SCORE:
+                currentSuperState = CurrentSuperState.CORAL_L2_LEFT_SCORE;
+                break;
+            case CORAL_L2_RIGHT_SCORE:
+                currentSuperState = CurrentSuperState.CORAL_L2_RIGHT_SCORE;
+                break;
             case ALGAE_GROUND_INTAKE:
                 currentSuperState = CurrentSuperState.ALGAE_GROUND_INTAKE;
                 break;
@@ -206,6 +213,12 @@ public class Superstructure extends SubsystemBase {
                 break;
             case CORAL_L3_RIGHT_SCORE:
                 scoreL3Coral(Constants.SuperstructureConstants.ScoringSide.RIGHT);
+                break;
+            case CORAL_L2_LEFT_SCORE:
+                scoreL2Coral(Constants.SuperstructureConstants.ScoringSide.LEFT);
+                break;
+            case CORAL_L2_RIGHT_SCORE:
+                scoreL2Coral(Constants.SuperstructureConstants.ScoringSide.RIGHT);
                 break;
             case ALGAE_GROUND_INTAKE:
                 intakeGroundAlgae();
@@ -294,8 +307,27 @@ public class Superstructure extends SubsystemBase {
         }
     }
 
+    private void scoreL2Coral(Constants.SuperstructureConstants.ScoringSide scoringSide) {
+        clawSubsystem.setWantedState(Claw.WantedState.COLLECT_CORAL);
+        shoulderSubsystem.setWantedState(Shoulder.WantedState.CORAL_L2_LINEUP);
+        elevatorSubsystem.setWantedState(Elevator.WantedState.CORAL_L2_LINEUP);
+
+        driveToCoralScoringPose(scoringSide);
+
+        if (isReadyToEject()) {
+            clawSubsystem.setWantedState(Claw.WantedState.EJECT_CORAL);
+            shoulderSubsystem.setWantedState(Shoulder.WantedState.CORAL_L2_RELEASE);
+            elevatorSubsystem.setWantedState(Elevator.WantedState.CORAL_L2_RELEASE);
+
+            //   if (!hasCoral()) {
+            //         setWantedSuperState(WantedSuperState.DEFAULT_STATE);
+            //   }
+        }
+    }
+
     private void prepAlgaeNet() {
         swerveSubsystem.setTargetRotation(Rotation2d.kZero);
+        swerveSubsystem.setTeleopVelocityCoefficient(ARM_HIGH_TELEOP_TRANSLATION_COEFFICIENT);
 
         if (swerveSubsystem.isAtDesiredRotation()) {
             clawSubsystem.setWantedState(Claw.WantedState.COLLECT_ALGAE);
@@ -305,6 +337,8 @@ public class Superstructure extends SubsystemBase {
     }
 
     private void scoreAlgaeNet() {
+        swerveSubsystem.setTargetRotation(Rotation2d.kZero);
+        swerveSubsystem.setTeleopVelocityCoefficient(ARM_HIGH_TELEOP_TRANSLATION_COEFFICIENT);
         clawSubsystem.setWantedState(Claw.WantedState.EJECT_ALGAE);
         shoulderSubsystem.setWantedState(Shoulder.WantedState.ALGAE_NET);
         elevatorSubsystem.setWantedState(Elevator.WantedState.ALGAE_NET);
