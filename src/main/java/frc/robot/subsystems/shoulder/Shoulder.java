@@ -140,7 +140,6 @@ public class Shoulder extends Mechanism {
         STOPPED,
 
         ALGAE_GROUND_INTAKE,
-        CORAL_GROUND_INTAKE,
         CORAL_INTAKE_LOLIPOP,
 
         CLIMB_PREP,
@@ -173,7 +172,6 @@ public class Shoulder extends Mechanism {
         STOPPED,
 
         ALGAE_GROUND_INTAKE,
-        CORAL_GROUND_INTAKE,
         CORAL_INTAKE_LOLIPOP,
 
         CLIMB_PREP,
@@ -232,8 +230,6 @@ public class Shoulder extends Mechanism {
                 return SystemState.STOWED_ALGAE;
             case ALGAE_GROUND_INTAKE:
                 return SystemState.ALGAE_GROUND_INTAKE;
-            case CORAL_GROUND_INTAKE:
-                return SystemState.CORAL_GROUND_INTAKE;
             case CORAL_INTAKE_LOLIPOP:
                 return SystemState.CORAL_INTAKE_LOLIPOP;
             case CLIMB_PREP:
@@ -288,9 +284,6 @@ public class Shoulder extends Mechanism {
             case ALGAE_GROUND_INTAKE:
                 wantedDegrees = -125;
                 break;
-            case CORAL_GROUND_INTAKE:
-                wantedDegrees = 4;
-                break;
             case CORAL_INTAKE_LOLIPOP:
                 wantedDegrees = -110;
                 break;
@@ -335,6 +328,12 @@ public class Shoulder extends Mechanism {
                 break;
             default:
                 return;
+        }
+        double currentDegrees = getPositionDegrees() - config.getOffset();
+        if ((wantedDegrees < -90 || wantedDegrees > 90)
+                && (currentDegrees >= -90 && currentDegrees <= 90)
+                && Robot.getSuperstructure().elevatorLow()) {
+            wantedDegrees = wantedDegrees < -90 ? -89 : 89;
         }
         final double finalWantedDegrees = wantedDegrees;
         setMMPositionFoc(getOffsetRotations(() -> finalWantedDegrees));

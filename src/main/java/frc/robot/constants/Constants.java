@@ -19,6 +19,9 @@ public class Constants {
         public static final double Y_OFFSET_FROM_TAG_FOR_SCORING_ON_REEF_INCHES = 6.5;
         public static final double Y_OFFSET_FROM_TAG_FOR_SCORING_L1_INCHES = 9.0;
 
+        public static final double TELEOP_MECHANISM_AT_SETPOINT_DEBOUNCE_SEC = 0.5;
+        public static final double TELEOP_MECHANISM_HAS_GAME_PIECE_DEBOUNCE_SEC = 0.5;
+
         public enum ScoringDirection {
             FRONT,
             BACK

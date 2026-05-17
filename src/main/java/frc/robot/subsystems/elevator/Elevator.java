@@ -25,10 +25,7 @@ public class Elevator extends Mechanism {
         @Getter @Setter private double minRotations = 0.1;
 
         @Getter private double triggerTolerance = 1.15;
-        @Getter private double elevatorIsUpHeight = 5;
-        @Getter private double elevatorIsHighHeight = 10;
         @Getter private double initPosition = 0;
-        @Getter private double holdMaxSpeedRPM = 1000;
 
         /* Elevator config settings */
         @Getter private final double zeroSpeed = -0.2;
@@ -331,6 +328,10 @@ public class Elevator extends Mechanism {
 
     public boolean isAtSetpoint() {
         return isAtTargetPosition(config::getTriggerTolerance);
+    }
+
+    public boolean elevatorLow() {
+        return getPositionRotations() < 10.0;
     }
 
     public DoubleSupplier getPositionMeters =

@@ -32,6 +32,10 @@ import frc.robot.subsystems.claw.Claw;
 import frc.robot.subsystems.claw.Claw.ClawConfig;
 import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.elevator.Elevator.ElevatorConfig;
+import frc.robot.subsystems.intake.IntakeDeploy;
+import frc.robot.subsystems.intake.IntakeDeploy.IntakeDeployConfig;
+import frc.robot.subsystems.intake.IntakeRoller;
+import frc.robot.subsystems.intake.IntakeRoller.IntakeRollerConfig;
 import frc.robot.subsystems.shoulder.Shoulder;
 import frc.robot.subsystems.shoulder.Shoulder.ShoulderConfig;
 import frc.robot.subsystems.swerve.Swerve;
@@ -63,6 +67,8 @@ public class Robot extends TimedRobot {
         public ElevatorConfig elevator = new ElevatorConfig();
         public ShoulderConfig shoulder = new ShoulderConfig();
         public ClawConfig claw = new ClawConfig();
+        public IntakeRollerConfig intakeRoller = new IntakeRollerConfig();
+        public IntakeDeployConfig intakeDeploy = new IntakeDeployConfig();
         public VisionConfig vision = new VisionConfig();
     }
 
@@ -74,6 +80,8 @@ public class Robot extends TimedRobot {
     @Getter private static Elevator elevatorSubsystem;
     @Getter private static Shoulder shoulderSubsystem;
     @Getter private static Claw clawSubsystem;
+    @Getter private static IntakeDeploy intakeDeploySubsystem;
+    @Getter private static IntakeRoller intakeRollerSubsystem;
     @Getter private static Vision visionSubsystem;
 
     @Getter private static Superstructure superstructure;
@@ -117,6 +125,12 @@ public class Robot extends TimedRobot {
             clawSubsystem = new Claw(config.claw);
             Timer.delay(canInitDelay);
 
+            intakeDeploySubsystem = new IntakeDeploy(config.intakeDeploy);
+            Timer.delay(canInitDelay);
+
+            intakeRollerSubsystem = new IntakeRoller(config.intakeRoller);
+            Timer.delay(canInitDelay);
+
             visionSubsystem = new Vision(config.vision);
             Timer.delay(canInitDelay);
 
@@ -124,7 +138,12 @@ public class Robot extends TimedRobot {
 
             superstructure =
                     new Superstructure(
-                            swerveSubsystem, elevatorSubsystem, shoulderSubsystem, clawSubsystem);
+                            swerveSubsystem,
+                            elevatorSubsystem,
+                            shoulderSubsystem,
+                            clawSubsystem,
+                            intakeRollerSubsystem,
+                            intakeDeploySubsystem);
 
             configureBindings();
 
@@ -208,6 +227,7 @@ public class Robot extends TimedRobot {
 
         pilot.dPadLeft.onTrue(clawSubsystem.forceSetHoldingCoralTrueCommand());
         pilot.dPadRight.onTrue(clawSubsystem.forceSetHoldingAlgaeTrueCommand());
+        pilot.dPadUp.onTrue(intakeRollerSubsystem.forceSetHoldingCoralTrueCommand());
     }
 
     public void setupSmartDashboardData() {

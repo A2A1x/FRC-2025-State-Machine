@@ -16,10 +16,13 @@ public class RobotSim {
 
     public static final Translation2d origin = new Translation2d(0.0, 0.0);
 
+    public static final Mechanism2d frontView = new Mechanism2d(widthMeters, heightMeters);
     public static final Mechanism2d leftView = new Mechanism2d(widthMeters, heightMeters);
 
     public RobotSim() {
         SmartDashboard.putData("LeftView", RobotSim.leftView);
+        SmartDashboard.putData("FrontView", RobotSim.frontView);
         leftView.setBackgroundColor(new Color8Bit(Color.kLightGray));
+        frontView.setBackgroundColor(new Color8Bit(Color.kLightGray));
     }
 }

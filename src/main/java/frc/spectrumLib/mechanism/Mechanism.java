@@ -182,6 +182,10 @@ public abstract class Mechanism implements Subsystem {
                                 < tolerance.getAsDouble());
     }
 
+    public boolean isAtRotations(DoubleSupplier target, DoubleSupplier tolerance) {
+        return Math.abs(getPositionRotations() - target.getAsDouble()) < tolerance.getAsDouble();
+    }
+
     public Trigger belowRotations(DoubleSupplier target, DoubleSupplier tolerance) {
         return new Trigger(
                 () -> getPositionRotations() < (target.getAsDouble() + tolerance.getAsDouble()));
